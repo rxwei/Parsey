@@ -50,16 +50,12 @@ public struct ParserInput {
 
 extension ParserInput : Sequence {
 
-    public func split(maxSplits: Int, omittingEmptySubsequences: Bool,
-                      whereSeparator isSeparator: (Character) throws -> Bool) rethrows -> [ParserInput] {
-        return try stream.split(maxSplits: maxSplits,
-                                omittingEmptySubsequences: omittingEmptySubsequences,
-                                whereSeparator: isSeparator).map { sub in ParserInput(sub) }
-    }
-
-
     public func prefix(_ maxLength: Int) -> ParserInput {
         return ParserInput(stream.prefix(maxLength), at: location)
+    }
+
+    public func prefix(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
+        return try ParserInput(stream.prefix(while: predicate), at: location)
     }
 
     public func suffix(_ maxLength: Int) -> ParserInput {
@@ -71,6 +67,22 @@ extension ParserInput : Sequence {
 
     public func makeIterator() -> String.CharacterView.Iterator {
         return stream.makeIterator()
+    }
+
+    public func drop(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
+        var newLoc = location
+        var rest = stream
+        for char in stream {
+            guard try predicate(char) else { break }
+            rest.removeFirst()
+            if char == "\n" {
+                newLoc.line += 1
+                newLoc.column = 0
+            } else {
+                newLoc.column += 1
+            }
+        }
+        return ParserInput(rest, at: newLoc)
     }
 
     public func dropFirst() -> ParserInput {
@@ -95,6 +107,13 @@ extension ParserInput : Sequence {
 
     public func dropLast(_ n: Int) -> ParserInput {
         return ParserInput(stream.dropLast(n), at: location)
+    }
+
+    public func split(maxSplits: Int, omittingEmptySubsequences: Bool,
+                      whereSeparator isSeparator: (Character) throws -> Bool) rethrows -> [ParserInput] {
+        return try stream.split(maxSplits: maxSplits,
+                                omittingEmptySubsequences: omittingEmptySubsequences,
+                                whereSeparator: isSeparator).map { sub in ParserInput(sub) }
     }
 
 }
@@ -184,7 +203,7 @@ extension Parser : FlatMappable {
         }
     }
 
-    public func apply<MapTarget>(_ transform: Parser<@escaping (Output) -> MapTarget>) -> Parser<MapTarget> {
+    public func apply<MapTarget>(_ transform: Parser<(Output) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let (out1, rest1) = try transform.run(input)
             let (out2, rest2) = try self.run(rest1)
