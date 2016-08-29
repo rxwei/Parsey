@@ -101,7 +101,11 @@ public extension Lexer {
 
     public static func regex(_ pattern: String) -> Parser<String> {
         return Parser<String> { input in
+            #if os(Linux)
+            let regex = try RegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
+            #else
             let regex = try NSRegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
+            #endif
             let matches = regex.matches(in: input.text,
                                         options: [ .anchored ],
                                         range: NSMakeRange(0, input.stream.count))
