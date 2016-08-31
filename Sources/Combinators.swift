@@ -16,19 +16,21 @@ postfix operator *
 
 public extension Parser {
 
-    public func manyOrNone() -> Parser<[Output]> {
-        return Parser<[Output]> { input in
-            var output: [Output] = []
+    public func manyOrNone() -> Parser<[Target]> {
+        return Parser<[Target]> { input in
+            var targets: [Target] = []
             var lastRest = input
+            var endLoc = input.location
             do {
                 repeat {
-                    let (out, rest) = try self.run(lastRest)
-                    lastRest = rest
-                    output.append(out)
+                    let out = try self.run(lastRest)
+                    targets.append(out.target)
+                    lastRest = out.rest
+                    endLoc = out.range.upperBound
                 } while true
             }
             catch {
-                return (output, lastRest)
+                return Parse(target: targets, range: input.location..<endLoc, rest: lastRest)
             }
         }
     }
@@ -36,19 +38,21 @@ public extension Parser {
     public func skippedManyOrNone() -> Parser<()> {
         return Parser<()> { input in
             var lastRest = input
+            var endLoc = input.location
             do {
                 repeat {
-                    let (_, rest) = try self.run(lastRest)
-                    lastRest = rest
+                    let out = try self.run(lastRest)
+                    lastRest = out.rest
+                    endLoc = out.range.upperBound
                 } while true
             }
             catch {
-                return ((), lastRest)
+                return Parse(target: (), range: input.location..<endLoc, rest: lastRest)
             }
         }
     }
 
-    public func many() -> Parser<[Output]> {
+    public func many() -> Parser<[Target]> {
         return flatMap { out in
             self.manyOrNone().map { outs in
                 [out] + outs
@@ -60,35 +64,37 @@ public extension Parser {
         return self ~~> skippedManyOrNone()
     }
 
-    public func withDefault(_ default: Output) -> Parser<Output> {
-        return self | .return(`default`)
+    public func withDefault(_ default: Target) -> Parser<Target> {
+        return self | Parser(success: `default`)
     }
 
-    public func occurring(_ times: Int) -> Parser<[Output]> {
-        return Parser<[Output]> { input in
-            var output: [Output] = []
+    public func occurring(_ times: Int) -> Parser<[Target]> {
+        return Parser<[Target]> { input in
+            var targets: [Target] = []
             var lastRest = input
+            var endLoc = input.location
             for _ in 1...times {
-                let (out, rest) = try self.run(lastRest)
-                lastRest = rest
-                output.append(out)
+                let out = try self.run(lastRest)
+                lastRest = out.rest
+                endLoc = out.range.upperBound
+                targets.append(out.target)
             }
-            return (output, lastRest)
+            return Parse(target: targets, range: input.location..<endLoc, rest: lastRest)
         }
     }
 
     public func between<Left, Right>(_ left: Parser<Left>,
-                                     _ right: Parser<Right>) -> Parser<Output> {
+                                     _ right: Parser<Right>) -> Parser<Target> {
         return left.flatMap { _ in
             self.flatMap { out in right.map { _ in out } }
         }
     }
 
-    public func amid<T>(_ surrounding: Parser<T>) -> Parser<Output> {
+    public func amid<T>(_ surrounding: Parser<T>) -> Parser<Target> {
         return between(surrounding, surrounding)
     }
 
-    public func many<T>(separatedBy separator: Parser<T>) -> Parser<[Output]> {
+    public func many<T>(separatedBy separator: Parser<T>) -> Parser<[Target]> {
         return flatMap { out in
             (separator ~~> self).manyOrNone().map { outs in
                 [out] + outs
@@ -96,11 +102,11 @@ public extension Parser {
         }
     }
 
-    public func manyOrNone<T>(separatedBy separator: Parser<T>) -> Parser<[Output]> {
-        return many(separatedBy: separator) | .return([])
+    public func manyOrNone<T>(separatedBy separator: Parser<T>) -> Parser<[Target]> {
+        return many(separatedBy: separator) | Parser<[Target]>(success: [])
     }
 
-    public func ended<T>(by terminator: Parser<T>) -> Parser<Output> {
+    public func ended<T>(by terminator: Parser<T>) -> Parser<Target> {
         return flatMap { res in terminator.map { _ in res } }
     }
 
@@ -112,31 +118,31 @@ public extension Parser {
         return map { _ in () }
     }
 
-    public func optional() -> Parser<Output?> {
-        return map{$0} | .return(nil)
+    public func optional() -> Parser<Target?> {
+        return map{ x in x } | .return(nil)
     }
     
-    public static func ~~><B>(_ lhs: Parser<Output>, _ rhs: Parser<B>) -> Parser<B> {
+    public static func ~~><B>(_ lhs: Parser<Target>, _ rhs: Parser<B>) -> Parser<B> {
         return lhs.followed(by: rhs)
     }
 
-    public static func <~~<B>(_ lhs: Parser<Output>, _ rhs: Parser<B>) -> Parser<Output> {
+    public static func <~~<B>(_ lhs: Parser<Target>, _ rhs: Parser<B>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
-    public static func <*><B>(_ lhs: Parser<(Output) -> B>, _ rhs: Parser<Output>) -> Parser<B> {
+    public static func <*><B>(_ lhs: Parser<(Target) -> B>, _ rhs: Parser<Target>) -> Parser<B> {
         return rhs.apply(lhs)
     }
 
 }
 
-public extension Parser where Output : Associative {
+public extension Parser where Target : Associative {
 
-    public func maybeEmpty() -> Parser<Output> {
-        return self | .return(Output.identity)
+    public func maybeEmpty() -> Parser<Target> {
+        return self | .return(Target.identity)
     }
 
-    public func concatenatingResult(with next: Parser<Output>) -> Parser<Output> {
+    public func concatenatingResult(with next: Parser<Target>) -> Parser<Target> {
         return flatMap { out1 in
             next.map { out2 in
                 out1 + out2
@@ -145,37 +151,37 @@ public extension Parser where Output : Associative {
     }
 
     @inline(__always)
-    public func manyConcatenated() -> Parser<Output> {
+    public func manyConcatenated() -> Parser<Target> {
         return many().concatenated()
     }
 
     @inline(__always)
-    public func manyConcatenatedOrNone() -> Parser<Output> {
+    public func manyConcatenatedOrNone() -> Parser<Target> {
         return manyOrNone().concatenated()
     }
 
     @inline(__always)
-    public static func +(lhs: Parser<Output>,
-                         rhs: Parser<Output>) -> Parser<Output> {
+    public static func +(lhs: Parser<Target>,
+                         rhs: Parser<Target>) -> Parser<Target> {
         return lhs.concatenatingResult(with: rhs)
     }
 
     @inline(__always)
-    public static postfix func +(parser: Parser<Output>) -> Parser<Output> {
+    public static postfix func +(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenated()
     }
 
     @inline(__always)
-    public static postfix func *(parser: Parser<Output>) -> Parser<Output> {
+    public static postfix func *(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenatedOrNone()
     }
 
 }
 
-public extension Parser where Output : Sequence, Output.Iterator.Element : Associative {
+public extension Parser where Target : Sequence, Target.Iterator.Element : Associative {
 
-    public func concatenated() -> Parser<Output.Iterator.Element> {
-        return map { $0.reduced() }
+    public func concatenated() -> Parser<Target.Iterator.Element> {
+        return map { x in x.reduced() }
     }
 
 }

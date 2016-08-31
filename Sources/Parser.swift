@@ -8,11 +8,80 @@
 
 import Funky
 
+public protocol TextLocation : Comparable {
+
+    var line: Int { set get }
+    var column: Int { set get }
+    var index: Int { set get }
+
+    init()
+    init(line: Int, column: Int, index: Int)
+
+}
+
+public extension TextLocation {
+
+    public typealias Stride = Int
+
+    public static func <(lhs: Self, rhs: Self) -> Bool {
+        return lhs.line < rhs.line ? true : lhs.column < rhs.column
+    }
+
+    public static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.column == rhs.column && lhs.line == rhs.line
+    }
+
+    public func advanced(byLines lines: Int, columns: Int, distance: Int) -> Self {
+        return Self(line: line + lines, column: column + columns, index: index + distance)
+    }
+
+    public func advanced(byColumns n: Int) -> Self {
+        return Self(line: line, column: column + n, index: index + n)
+    }
+
+    public func advanced() -> Self {
+        return Self(line: line, column: column + 1, index: index + 1)
+    }
+
+    public func newLine() -> Self {
+        var new = Self()
+        new.line += 1
+        new.index += 1
+        return new
+    }
+
+}
+
+public struct SourceLocation : TextLocation {
+
+    public var line = 1, column = 0, index = 0
+
+    public init() { }
+
+    public init(line: Int, column: Int, index: Int) {
+        self.line = line
+        self.column = column
+        self.index = index
+    }
+
+}
+
+extension SourceLocation : CustomStringConvertible {
+
+    public var description: String {
+        return "\(line):\(column)"
+    }
+    
+}
+
+public typealias SourceRange = Range<SourceLocation>
+
 public struct ParserInput {
 
-    public typealias Location = (line: Int, column: Int)
+    public typealias Stride = Int
+
     public let stream: String.CharacterView
-    public let location: Location
+    public let location: SourceLocation
 
     public var isEmpty: Bool {
         return stream.isEmpty
@@ -25,23 +94,24 @@ public struct ParserInput {
     public var text: String {
         return String(stream)
     }
-    
-    public init(_ string: String, at location: Location = (1, 0)) {
+
+    public init(_ string: String, at location: SourceLocation = SourceLocation()) {
         self.stream = string.characters
         self.location = location
     }
 
-    public init<S: Sequence>(_ stream: S, at location: Location = (1, 0)) where S.Iterator.Element == Character {
+    public init<S: Sequence>(_ stream: S, at location: SourceLocation = SourceLocation())
+        where S.Iterator.Element == Character {
         self.stream = String.CharacterView(stream)
         self.location = location
     }
 
-    public init(_ stream: String.CharacterView, at location: Location = (1, 0)) {
+    public init(_ stream: String.CharacterView, at location: SourceLocation = SourceLocation()) {
         self.stream = stream
         self.location = location
     }
 
-    public init(emptyStreamAt location: Location = (1, 0)) {
+    public init(emptyStreamAt location: SourceLocation = SourceLocation()) {
         self.stream = String.CharacterView()
         self.location = location
     }
@@ -87,16 +157,14 @@ extension ParserInput : Sequence {
 
     public func dropFirst() -> ParserInput {
         guard let first = stream.first else { return self }
-        let newLoc = first == "\n"
-                   ? (line: location.line + 1, column: 0)
-                   : (line: location.line, column: location.column + 1)
+        let newLoc = first == "\n" ? location.newLine() : location.advanced()
         return ParserInput(stream.dropFirst(), at: newLoc)
     }
 
     public func dropFirst(_ n: Int) -> ParserInput {
         let prefix = stream.prefix(n)
         let newLoc = prefix.reduce(location) { loc, x in
-            x == "\n" ? (loc.line + 1, 0) : (loc.line, loc.column + 1)
+            x == "\n" ? location.newLine() : location.advanced()
         }
         return ParserInput(stream.dropFirst(n), at: newLoc)
     }
@@ -122,44 +190,60 @@ extension ParserInput : CustomStringConvertible {
 
     public var description: String {
         let streamPrint = String(stream.prefix(50))
-        return "(line \(location.line), column \(location.column)):\n\(streamPrint)"
+        return "\(location) ----\n\(streamPrint)"
     }
-    
+
 }
 
-public struct Parser<Output> {
+public struct Parse<Target> {
+    public var target: Target
+    public var range: Range<SourceLocation>
+    public var rest: ParserInput
+}
+
+extension Parse : CustomStringConvertible {
+
+    public var description: String {
+        return "\(range) : \(target)"
+    }
+
+}
+
+public struct Parser<Target> {
 
     public typealias Error = ParseError
 
     public typealias Input = ParserInput
 
-    public var run: (Input) throws -> (Output, rest: Input)
+    public var run: (Input) throws -> Parse<Target>
 
-    public init(run: @escaping (Input) throws -> (Output, rest: Input)) {
+    public init(run: @escaping (Input) throws -> Parse<Target>) {
         self.run = run
     }
 
-    public init(success output: Output) {
-        self.init { input in (output, rest: ParserInput(emptyStreamAt: input.location)) }
+    public init(success target: Target) {
+        self.init { input in
+            Parse(target: target, range: input.location..<input.location, rest: input)
+        }
     }
 
     public init(failure error: ParseError) {
         self.init { _ in throw error }
     }
 
-    public func parse(_ input: String) throws -> Output {
+    public func parse(_ input: String) throws -> Target {
         return try parse(ParserInput(input))
     }
     
-    public func parse(_ input: Input) throws -> Output {
+    public func parse(_ input: Input) throws -> Target {
         do {
-            let (output, rest) = try run(input)
-            guard rest.isEmpty else { throw ParseError.error(at: rest) }
-            return output
+            let output = try run(input)
+            guard output.rest.isEmpty else { throw ParseError.error(at: output.rest) }
+            return output.target
         }
     }
 
-    public func or(_ other: @autoclosure @escaping () -> Parser<Output>) -> Parser<Output> {
+    public func or(_ other: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return Parser { input in
             do {
                 return try self.run(input)
@@ -170,8 +254,8 @@ public struct Parser<Output> {
         }
     }
 
-    public static func |(_ lhs: Parser<Output>,
-                         _ rhs: @autoclosure @escaping () -> Parser<Output>) -> Parser<Output> {
+    public static func |(_ lhs: Parser<Target>,
+                         _ rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return Parser { input in
             do {
                 return try lhs.run(input)
@@ -186,35 +270,58 @@ public struct Parser<Output> {
 }
 
 extension Parser : FlatMappable {
-
-    public typealias MapSource = Output
+    public typealias MapSource = Target
     public typealias MapTarget = Any
     public typealias MapResult = Parser<MapTarget>
-    public typealias ApplicativeTransform = Parser<(MapSource) -> MapTarget>
+    public typealias ApplicativeTransform = Parser<(Target) -> MapTarget>
 
-    public static func singleton(_ element: Output) -> Parser<Output> {
-        return Parser { input in (element, input) }
+    public static func singleton(_ element: (Target)) -> Parser<Target> {
+        return Parser(success: element)
     }
-
-    public func map<MapTarget>(_ transform: @escaping (Output) -> MapTarget) -> Parser<MapTarget> {
+    
+    public func map<MapTarget>(_ transform: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
-            let (output, rest) = try self.run(input)
-            return (transform(output), rest)
+            let out = try self.run(input)
+            return Parse(target: transform(out.target), range: out.range, rest: out.rest)
         }
     }
 
-    public func apply<MapTarget>(_ transform: Parser<(Output) -> MapTarget>) -> Parser<MapTarget> {
+    public func apply<MapTarget>(_ transform: Parser<(Target) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
-            let (out1, rest1) = try transform.run(input)
-            let (out2, rest2) = try self.run(rest1)
-            return (out1(out2), rest2)
+            let out1 = try transform.run(input)
+            let out2 = try self.run(out1.rest)
+            return Parse(target: out1.target(out2.target), range: out2.range, rest: out2.rest)
         }
     }
 
-   public func flatMap<MapTarget>(_ transform: @escaping (Output) -> Parser<MapTarget>) -> Parser<MapTarget> {
+   public func flatMap<MapTarget>(_ transform: @escaping (Target) -> Parser<MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
-            let (out, rest) = try self.run(input)
-            return try transform(out).run(rest)
+            let out = try self.run(input)
+            let out2 = try transform(out.target).run(out.rest)
+            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
+        }
+    }
+
+    public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out = try self.run(input)
+            return Parse(target: transform(out), range: out.range, rest: out.rest)
+        }
+    }
+
+    public func applyParse<MapTarget>(_ transform: Parser<(Parse<Target>) -> MapTarget>) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out1 = try transform.run(input)
+            let out2 = try self.run(out1.rest)
+            return Parse(target: out1.target(out2), range: out2.range, rest: out2.rest)
+        }
+    }
+
+   public func flatMapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> Parser<MapTarget>) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out = try self.run(input)
+            let out2 = try transform(out).run(out.rest)
+            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
         }
     }
 

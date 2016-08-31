@@ -15,7 +15,7 @@ public enum Lexer {
             guard let first = input.first, first == char else {
                 throw ParseError.expecting(char, at: input)
             }
-            return (String(char), input.dropFirst())
+            return Parse(target: String(char), range: input.location..<input.location.advanced(), rest: input.dropFirst())
         }
     }
 
@@ -24,7 +24,7 @@ public enum Lexer {
             guard let first = input.first, range.contains(first) else {
                 throw ParseError.expecting("a character within range \(range)", at: input)
             }
-            return (String(first), input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
         }
     }
 
@@ -35,7 +35,7 @@ public enum Lexer {
             guard let first = input.first, characters.contains(first) else {
                 throw ParseError.expecting("a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
             }
-            return (String(first), input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
         }
     }
 
@@ -48,7 +48,7 @@ public enum Lexer {
             guard let first = input.first, first != exception else {
                 throw ParseError.expecting("any character except \"\(exception)\"", at: input)
             }
-            return (String(first), input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
         }
     }
 
@@ -59,7 +59,7 @@ public enum Lexer {
             guard let first = input.first, !exceptions.contains(first) else {
                 throw ParseError.expecting("any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
             }
-            return (String(first), input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
         }
     }
 
@@ -113,7 +113,9 @@ public extension Lexer {
                 throw ParseError.expecting("Pattern \"\(pattern)\"", at: input)
             }
             let length = match.range.length
-            return (String(input.prefix(length)), input.dropFirst(length))
+            return Parse(target: String(input.prefix(length)),
+                         range: input.location..<input.location.advanced(byColumns: length),
+                         rest: input.dropFirst(length))
         }
     }
 
@@ -122,7 +124,9 @@ public extension Lexer {
             guard input.starts(with: string.characters) else {
                 throw ParseError.expecting(string, at: input)
             }
-            return (string, input.dropFirst(string.characters.count))
+            return Parse(target: string,
+                         range: input.location..<input.location.advanced(byColumns: string.characters.count),
+                         rest: input.dropFirst(string.characters.count))
         }
     }
 

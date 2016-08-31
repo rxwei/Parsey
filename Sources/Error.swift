@@ -18,10 +18,10 @@ extension ParseError : CustomStringConvertible {
     public var description: String {
         switch self {
             case let .error(at: input):
-                return "Parse error ---- \(input)"
+                return "Parse error at \(input)"
             case let .expecting(desc, at: input):
                 let first = input.first
-                return "Parse error ---- \(input)\n\nExpecting \(desc), but found \"\(first?.description ?? "")\""
+                return "Parse error at \(input)\n\nExpecting \(desc), but found \"\(first?.description ?? "")\""
         }
     }
 
