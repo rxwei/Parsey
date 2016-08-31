@@ -14,33 +14,40 @@ public protocol TextLocation : Comparable {
     var column: Int { set get }
     var index: Int { set get }
 
-    init()
+    static var initialPosition: Int { get }
+
     init(line: Int, column: Int, index: Int)
 
 }
 
 public extension TextLocation {
 
-    public typealias Stride = Int
+    init() {
+        self.init(line: Self.initialPosition, column: Self.initialPosition, index: 0)
+    }
 
     public static func <(lhs: Self, rhs: Self) -> Bool {
         return lhs.index < rhs.index
     }
 
     public static func ==(lhs: Self, rhs: Self) -> Bool {
-        return lhs.column == rhs.column && lhs.line == rhs.line
+        return lhs.column == rhs.column && lhs.line == rhs.line && lhs.index == rhs.index
     }
 
     public func advanced(byLines lines: Int, columns: Int, distance: Int) -> Self {
         return Self(line: line + lines, column: column + columns, index: index + distance)
     }
 
-    public func advanced(byColumns n: Int) -> Self {
+    public func advanced(by n: Int) -> Self {
         return Self(line: line, column: column + n, index: index + n)
     }
 
-    public func advanced() -> Self {
-        return Self(line: line, column: column + 1, index: index + 1)
+    public func advanced(past character: Character) -> Self {
+        return character == "\n" ? newLine() : advanced(by: 1)
+    }
+
+    public static func + (lhs: Self, n: Int) -> Self {
+        return lhs.advanced(by: n)
     }
 
     public func advanced<S: Sequence>(byScanning prefix: S) -> Self where S.Iterator.Element == Character {
@@ -48,6 +55,7 @@ public extension TextLocation {
         for char in prefix {
             if char == "\n" {
                 new.line += 1
+                new.column = Self.initialPosition
             } else {
                 new.column += 1
             }
@@ -57,19 +65,16 @@ public extension TextLocation {
     }
 
     public func newLine() -> Self {
-        var new = Self()
-        new.line = line + 1
-        new.index += index + 1
-        return new
+        return Self(line: line + 1, column: Self.initialPosition, index: index + 1)
     }
 
 }
 
 public struct SourceLocation : TextLocation {
 
-    public var line = 1, column = 0, index = 0
+    public static let initialPosition = 1
 
-    public init() { }
+    public var line, column, index: Int
 
     public init(line: Int, column: Int, index: Int) {
         self.line = line
@@ -170,14 +175,14 @@ extension ParserInput : Sequence {
 
     public func dropFirst() -> ParserInput {
         guard let first = stream.first else { return self }
-        let newLoc = first == "\n" ? location.newLine() : location.advanced()
+        let newLoc = first == "\n" ? location.newLine() : location.advanced(by: 1)
         return ParserInput(stream.dropFirst(), at: newLoc)
     }
 
     public func dropFirst(_ n: Int) -> ParserInput {
         let prefix = stream.prefix(n)
         let newLoc = prefix.reduce(location) { loc, x in
-            x == "\n" ? location.newLine() : location.advanced()
+            x == "\n" ? location.newLine() : location.advanced(by: 1)
         }
         return ParserInput(stream.dropFirst(n), at: newLoc)
     }

@@ -15,7 +15,7 @@ public enum Lexer {
             guard let first = input.first, first == char else {
                 throw ParseError.expecting(char, at: input)
             }
-            return Parse(target: String(char), range: input.location..<input.location.advanced(), rest: input.dropFirst())
+            return Parse(target: String(char), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
     }
 
@@ -24,7 +24,7 @@ public enum Lexer {
             guard let first = input.first, range.contains(first) else {
                 throw ParseError.expecting("a character within range \(range)", at: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
     }
 
@@ -35,7 +35,7 @@ public enum Lexer {
             guard let first = input.first, characters.contains(first) else {
                 throw ParseError.expecting("a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
     }
 
@@ -48,7 +48,7 @@ public enum Lexer {
             guard let first = input.first, first != exception else {
                 throw ParseError.expecting("any character except \"\(exception)\"", at: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
     }
 
@@ -59,7 +59,7 @@ public enum Lexer {
             guard let first = input.first, !exceptions.contains(first) else {
                 throw ParseError.expecting("any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(), rest: input.dropFirst())
+            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
     }
 
@@ -113,8 +113,8 @@ public extension Lexer {
                 throw ParseError.expecting("Pattern \"\(pattern)\"", at: input)
             }
             let length = match.range.length
-            let prefix = input.prefix(length)
-            return Parse(target: String(prefix.stream),
+            let prefix = input.stream.prefix(length)
+            return Parse(target: String(prefix),
                          range: input.location..<input.location.advanced(byScanning: prefix),
                          rest: input.dropFirst(length))
         }
@@ -123,10 +123,10 @@ public extension Lexer {
     public static func string(_ string: String) -> Parser<String> {
         return Parser<String> { input in
             guard input.starts(with: string.characters) else {
-                throw ParseError.expecting(string, at: input)
+                throw ParseError.expecting("String \"\(string)\"", at: input)
             }
             return Parse(target: string,
-                         range: input.location..<input.location.advanced(byColumns: string.characters.count),
+                         range: input.location..<input.location.advanced(byScanning: string.characters),
                          rest: input.dropFirst(string.characters.count))
         }
     }
