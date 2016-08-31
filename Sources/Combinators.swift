@@ -122,7 +122,7 @@ public extension Parser {
         return map{ x in x } | .return(nil)
     }
     
-    public static func ~~> <T>(_ lhs: Parser<T>, _ rhs: Parser<Target>) -> Parser<Target> {
+    public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
         return lhs.followed(by: rhs)
     }
 
