@@ -122,15 +122,15 @@ public extension Parser {
         return map{ x in x } | .return(nil)
     }
     
-    public static func ~~><B>(_ lhs: Parser<Target>, _ rhs: Parser<B>) -> Parser<B> {
+    public static func ~~> <T>(_ lhs: Parser<T>, _ rhs: Parser<Target>) -> Parser<Target> {
         return lhs.followed(by: rhs)
     }
 
-    public static func <~~<B>(_ lhs: Parser<Target>, _ rhs: Parser<B>) -> Parser<Target> {
+    public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
-    public static func <*><B>(_ lhs: Parser<(Target) -> B>, _ rhs: Parser<Target>) -> Parser<B> {
+    public static func <*> <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.apply(lhs)
     }
 

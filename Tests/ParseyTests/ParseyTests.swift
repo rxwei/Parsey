@@ -26,14 +26,6 @@ class ParseyTests: XCTestCase {
                     case let .id(id, range): return "ID:(\(range)):\(id)"
                 }
             }
-
-            var range: SourceRange {
-                switch self {
-                    case let .sExp(_, range): return range
-                    case let .int(_, range): return range
-                    case let .id(_, range): return range
-                }
-            }
         }
 
         enum Grammar {
@@ -43,14 +35,20 @@ class ParseyTests: XCTestCase {
             }
 
             static let aSExp: Parser<Expr> = anExp.many(separatedBy: Lexer.whitespaces)
-                .between(Lexer.character("("), Lexer.character(")")).mapParse { parse in
-                Expr.sExp(parse.target, parse.range)
-            }
+                                                  .amid(Lexer.whitespaces.optional())
+                                                  .between("(", ")")
+                                                  .mapParse { parse in Expr.sExp(parse.target, parse.range) }
 
             static let anExp = anInt | anID | aSExp
         }
 
-        let _ = try Grammar.anExp.parse("(+ (+ +1 -20) 2 3)")
+        do {
+            let ast = try Grammar.anExp.amid(Lexer.whitespaces.optional()).parse("(+ (+ +1 -20) 2 3)")
+            print("Checking source ranges:\n\(ast)")
+        }
+        catch let error as ParseError {
+            XCTFail(error.description)
+        }
     }
 
     func testStrings() {

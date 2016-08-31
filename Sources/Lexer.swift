@@ -131,3 +131,24 @@ public extension Lexer {
     }
 
 }
+
+/// MARK: - Combinator Extension
+extension Parser {
+
+    public func amid(_ surrounding: String) -> Parser<Target> {
+        return amid(Lexer.string(surrounding))
+    }
+
+    public func between(_ left: String, _ right: String) -> Parser<Target> {
+        return between(Lexer.string(left), Lexer.string(right))
+    }
+
+    public static func ~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
+        return Lexer.string(lhs).followed(by: rhs)
+    }
+
+    public static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
+        return lhs.ended(by: Lexer.string(rhs))
+    }
+
+}

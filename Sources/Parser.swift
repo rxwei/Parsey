@@ -266,7 +266,6 @@ public struct Parser<Target> {
         }
     }
 
-
 }
 
 extension Parser : FlatMappable {
