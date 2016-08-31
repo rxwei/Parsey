@@ -113,8 +113,9 @@ public extension Lexer {
                 throw ParseError.expecting("Pattern \"\(pattern)\"", at: input)
             }
             let length = match.range.length
-            return Parse(target: String(input.prefix(length)),
-                         range: input.location..<input.location.advanced(byColumns: length),
+            let prefix = input.prefix(length)
+            return Parse(target: String(prefix.stream),
+                         range: input.location..<input.location.advanced(byScanning: prefix),
                          rest: input.dropFirst(length))
         }
     }

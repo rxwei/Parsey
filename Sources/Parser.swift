@@ -24,7 +24,7 @@ public extension TextLocation {
     public typealias Stride = Int
 
     public static func <(lhs: Self, rhs: Self) -> Bool {
-        return lhs.line < rhs.line ? true : lhs.column < rhs.column
+        return lhs.index < rhs.index
     }
 
     public static func ==(lhs: Self, rhs: Self) -> Bool {
@@ -43,10 +43,23 @@ public extension TextLocation {
         return Self(line: line, column: column + 1, index: index + 1)
     }
 
+    public func advanced<S: Sequence>(byScanning prefix: S) -> Self where S.Iterator.Element == Character {
+        var new = self
+        for char in prefix {
+            if char == "\n" {
+                new.line += 1
+            } else {
+                new.column += 1
+            }
+            new.index += 1
+        }
+        return new
+    }
+
     public func newLine() -> Self {
         var new = Self()
-        new.line += 1
-        new.index += 1
+        new.line = line + 1
+        new.index += index + 1
         return new
     }
 
