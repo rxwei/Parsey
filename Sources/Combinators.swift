@@ -15,6 +15,8 @@ infix operator ** : FunctionCompositionPrecedence
 infix operator ^^ : FunctionCompositionPrecedence
 infix operator ^^^ : FunctionCompositionPrecedence
 postfix operator .?
+postfix operator .+
+postfix operator .*
 postfix operator +
 postfix operator *
 
@@ -152,6 +154,14 @@ public extension Parser {
 
     public static postfix func .? (_ parser: Parser<Target>) -> Parser<Target?> {
         return parser.optional()
+    }
+
+    public static postfix func .+(parser: Parser<Target>) -> Parser<[Target]> {
+        return parser.many()
+    }
+
+    public static postfix func .*(parser: Parser<Target>) -> Parser<[Target]> {
+        return parser.manyOrNone()
     }
 
     static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
