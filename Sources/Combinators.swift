@@ -10,7 +10,11 @@ import Funky
 
 infix operator ~~> : FunctionCompositionPrecedence
 infix operator <~~ : FunctionCompositionPrecedence
-infix operator <*> : FunctionCompositionPrecedence
+infix operator ~~ : FunctionCompositionPrecedence
+infix operator ** : FunctionCompositionPrecedence
+infix operator ^^ : FunctionCompositionPrecedence
+infix operator ^^^ : FunctionCompositionPrecedence
+postfix operator .?
 postfix operator +
 postfix operator *
 
@@ -110,7 +114,11 @@ public extension Parser {
         return flatMap { res in terminator.map { _ in res } }
     }
 
-    public func followed<T>(by follower: Parser<T>) -> Parser<T> {
+    public func followed<T>(by follower: Parser<T>) -> Parser<(Target, T)> {
+        return flatMap { out1 in follower.map { out2 in (out1, out2) } }
+    }
+
+    public func skippedAndFollowed<T>(by follower: Parser<T>) -> Parser<T> {
         return flatMap { _ in follower }
     }
 
@@ -123,15 +131,43 @@ public extension Parser {
     }
     
     public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
-        return lhs.followed(by: rhs)
+        return lhs.skippedAndFollowed(by: rhs)
     }
 
     public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
-    public static func <*> <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
+    public static func ** <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.apply(lhs)
+    }
+
+    public static func ^^ <MapTarget>(_ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
+        return lhs.map(rhs)
+    }
+
+    public static func ^^^ <MapTarget>(_ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
+        return lhs.mapParse(rhs)
+    }
+
+    public static postfix func .? (_ parser: Parser<Target>) -> Parser<Target?> {
+        return parser.optional()
+    }
+
+    static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
+        return lhs.followed(by: rhs)
+    }
+
+    static public func ~~ <T, U>(_ lhs: Parser<(Target, T)>, _ rhs: Parser<U>) -> Parser<(Target, T, U)> {
+        return lhs.flatMap { (a, b) in rhs.map { c in (a, b, c) } }
+    }
+
+    static public func ~~ <T, U, V>(_ lhs: Parser<(Target, T, U)>, _ rhs: Parser<V>) -> Parser<(Target, T, U, V)> {
+        return lhs.flatMap { (a, b, c) in rhs.map { d in (a, b, c, d) } }
+    }
+
+    static public func ~~ <T, U, V, W>(_ lhs: Parser<(Target, T, U, V)>, _ rhs: Parser<W>) -> Parser<(Target, T, U, V, W)> {
+        return lhs.flatMap { (a, b, c, d) in rhs.map { e in (a, b, c, d, e) } }
     }
 
 }

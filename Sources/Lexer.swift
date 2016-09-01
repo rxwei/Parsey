@@ -68,6 +68,9 @@ public enum Lexer {
 /// MARK: - Primitives
 public extension Lexer {
 
+    public static let space           = character(" ")
+    public static let tab             = character("\t")
+
     public static let whitespace      = anyCharacter(in: [" ", "\t"])
     public static let whitespaces     = whitespace+
     
@@ -145,7 +148,7 @@ extension Parser {
     }
 
     public static func ~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
-        return Lexer.string(lhs).followed(by: rhs)
+        return Lexer.string(lhs) ~~> rhs
     }
 
     public static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
