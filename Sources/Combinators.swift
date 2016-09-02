@@ -140,8 +140,8 @@ public extension Parser {
         return lhs.ended(by: rhs)
     }
 
-    public static func ** <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
-        return rhs.apply(lhs)
+    public static func ** <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: @autoclosure () -> Parser<Target>) -> Parser<MapTarget> {
+        return rhs().apply(lhs)
     }
 
     public static func ^^ <MapTarget>(_ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
