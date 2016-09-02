@@ -136,6 +136,25 @@ public struct ParserInput {
 
 }
 
+/// Temporary workaround for a code-breaking change introduced 
+/// after the Swift 3 code-breaking change deadline.
+/// FIXME: To be removed when Xcode 8 beta 7 comes out
+extension Sequence where SubSequence : Sequence,
+                         SubSequence.Iterator.Element == Iterator.Element,
+                         SubSequence.SubSequence == SubSequence {
+    public func prefix(while predicate: (Iterator.Element) throws -> Bool) rethrows -> AnySequence<Iterator.Element> {
+        var result: [Iterator.Element] = []
+        
+        for element in self {
+            guard try predicate(element) else {
+                break
+            }
+            result.append(element)
+        }
+        return AnySequence(result)
+    }
+}
+
 extension ParserInput : Sequence {
 
     public func prefix(_ maxLength: Int) -> ParserInput {
