@@ -6,23 +6,34 @@
 //
 //
 
-public enum ParseError : Error {
+import Funky
 
-    case error(at: ParserInput)
-    case expecting(CustomStringConvertible, at: ParserInput)
-
+public protocol ParseError : Error {
+    var expected: String { get set }
+    var input: ParserInput { get set }
 }
 
-extension ParseError : CustomStringConvertible {
+public struct ParseFailure : ParseError {
+    public var expected: String
+    public var input: ParserInput
+    internal var irrecoverable: Bool = false
+
+    public init(expected: String, input: ParserInput) {
+        self.expected = expected
+        self.input = input
+    }
+
+    public init(extraInputAt input: ParserInput) {
+        self.expected = "end of input"
+        self.input = input
+    }
+}
+
+extension ParseFailure : CustomStringConvertible {
 
     public var description: String {
-        switch self {
-            case let .error(at: input):
-                return "Parse error at \(input)"
-            case let .expecting(desc, at: input):
-                let first = input.first
-                return "Parse error at \(input)\n\nExpecting \(desc), but found \"\(first?.description ?? "")\""
-        }
+        let first = input.first
+        return "Parse failure at \(input)\n\nExpecting \(expected), but found \"\(first?.description ?? "")\""
     }
 
     public var localizedDescription: String {
@@ -30,3 +41,4 @@ extension ParseError : CustomStringConvertible {
     }
 
 }
+

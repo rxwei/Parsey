@@ -8,19 +8,58 @@
 
 import Funky
 
-infix operator ~~> : FunctionCompositionPrecedence
-infix operator <~~ : FunctionCompositionPrecedence
-infix operator ~~ : FunctionCompositionPrecedence
-infix operator ** : FunctionCompositionPrecedence
-infix operator ^^ : FunctionCompositionPrecedence
-infix operator ^^^ : FunctionCompositionPrecedence
-postfix operator .?
-postfix operator .+
-postfix operator .*
-postfix operator +
-postfix operator *
+infix operator ~~> : FunctionCompositionPrecedence  /// Skipped to rhs
+infix operator !~~> : FunctionCompositionPrecedence /// Non-backtracking ~~>
+infix operator <~~ : FunctionCompositionPrecedence  /// Ended by rhs
+infix operator !<~~ : FunctionCompositionPrecedence /// Non-backtracking <~~
+infix operator ~~ : FunctionCompositionPrecedence   /// Left and right forming a tuple
+infix operator !~~ : FunctionCompositionPrecedence  /// Non-backtracking ~~
+infix operator ** : FunctionCompositionPrecedence   /// Apply resulting func to rhs
+infix operator !** : FunctionCompositionPrecedence  /// Non-backtracking !**
+infix operator ^^ : FunctionCompositionPrecedence   /// .map
+infix operator ^^^ : FunctionCompositionPrecedence  /// .mapParse
+infix operator <!-- : FunctionCompositionPrecedence /// Tagged
+
+postfix operator .! /// Non-backtracking
+postfix operator .? /// Optional
+postfix operator .+ /// One or more
+postfix operator .* /// Zero or more
+postfix operator +  /// One or more concatenated
+postfix operator *  /// Zero or more concatenated
 
 public extension Parser {
+
+    public func nonbacktracking() -> Parser<Target> {
+        return Parser { input in
+            do {
+                return try self.run(input)
+            }
+            catch var failure as ParseFailure {
+                failure.irrecoverable = true
+                throw failure
+            }
+        }
+    }
+
+    public static postfix func .!(parser: Parser<Target>) -> Parser<Target> {
+        return parser.nonbacktracking()
+    }
+
+    public func tagged(_ tag: String) -> Parser<Target> {
+        return Parser { input in
+            do {
+                return try self.run(input)
+            }
+            catch var failure as ParseError {
+                failure.expected = tag
+                throw failure
+            }
+        }
+    }
+
+    public static func <!--(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
+        return lhs.tagged(rhs)
+    }
 
     public func manyOrNone() -> Parser<[Target]> {
         return Parser<[Target]> { input in
@@ -35,7 +74,7 @@ public extension Parser {
                     endLoc = out.range.upperBound
                 } while true
             }
-            catch {
+            catch let failure as ParseFailure where !failure.irrecoverable {
                 return Parse(target: targets, range: input.location..<endLoc, rest: lastRest)
             }
         }
@@ -52,7 +91,7 @@ public extension Parser {
                     endLoc = out.range.upperBound
                 } while true
             }
-            catch {
+            catch let failure as ParseFailure where !failure.irrecoverable {
                 return Parse(target: (), range: input.location..<endLoc, rest: lastRest)
             }
         }
@@ -120,7 +159,7 @@ public extension Parser {
         return flatMap { out1 in follower.map { out2 in (out1, out2) } }
     }
 
-    public func skippedAndFollowed<T>(by follower: Parser<T>) -> Parser<T> {
+    public func skippedTo<T>(by follower: Parser<T>) -> Parser<T> {
         return flatMap { _ in follower }
     }
 
@@ -133,15 +172,27 @@ public extension Parser {
     }
     
     public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
-        return lhs.skippedAndFollowed(by: rhs)
+        return lhs.skippedTo(by: rhs)
+    }
+
+    public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
+        return lhs.nonbacktracking().skippedTo(by: rhs)
     }
 
     public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
+    public static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
+        return lhs.nonbacktracking().ended(by: rhs)
+    }
+
     public static func ** <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.apply(lhs)
+    }
+
+    public static func !** <MapTarget>(_ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
+        return rhs.nonbacktracking().apply(lhs)
     }
 
     public static func ^^ <MapTarget>(_ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
@@ -167,18 +218,23 @@ public extension Parser {
     static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
         return lhs.followed(by: rhs)
     }
-
-    static public func ~~ <T, U>(_ lhs: Parser<(Target, T)>, _ rhs: Parser<U>) -> Parser<(Target, T, U)> {
-        return lhs.flatMap { (a, b) in rhs.map { c in (a, b, c) } }
+    
+    static public func !~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
+        return lhs.nonbacktracking().followed(by: rhs)
     }
 
-    static public func ~~ <T, U, V>(_ lhs: Parser<(Target, T, U)>, _ rhs: Parser<V>) -> Parser<(Target, T, U, V)> {
-        return lhs.flatMap { (a, b, c) in rhs.map { d in (a, b, c, d) } }
-    }
-
-    static public func ~~ <T, U, V, W>(_ lhs: Parser<(Target, T, U, V)>, _ rhs: Parser<W>) -> Parser<(Target, T, U, V, W)> {
-        return lhs.flatMap { (a, b, c, d) in rhs.map { e in (a, b, c, d, e) } }
-    }
+    /// Unavailable due to compiler bug of tuple matching
+//    static public func ~~ <T, U>(_ lhs: Parser<(Target, T)>, _ rhs: Parser<U>) -> Parser<(Target, T, U)> {
+//        return lhs.flatMap { (a, b) in rhs.map { c in (a, b, c) } }
+//    }
+//
+//    static public func ~~ <T, U, V>(_ lhs: Parser<(Target, T, U)>, _ rhs: Parser<V>) -> Parser<(Target, T, U, V)> {
+//        return lhs.flatMap { (a, b, c) in rhs.map { d in (a, b, c, d) } }
+//    }
+//
+//    static public func ~~ <T, U, V, W>(_ lhs: Parser<(Target, T, U, V)>, _ rhs: Parser<W>) -> Parser<(Target, T, U, V, W)> {
+//        return lhs.flatMap { (a, b, c, d) in rhs.map { e in (a, b, c, d, e) } }
+//    }
 
 }
 
@@ -206,18 +262,15 @@ public extension Parser where Target : Associative {
         return manyOrNone().concatenated()
     }
 
-    @inline(__always)
     public static func +(lhs: Parser<Target>,
                          rhs: Parser<Target>) -> Parser<Target> {
         return lhs.concatenatingResult(with: rhs)
     }
 
-    @inline(__always)
     public static postfix func +(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenated()
     }
 
-    @inline(__always)
     public static postfix func *(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenatedOrNone()
     }

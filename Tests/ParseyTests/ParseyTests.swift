@@ -36,16 +36,16 @@ class ParseyTests: XCTestCase {
             }
 
             static let aSExp: Parser<Expr> =
-                "(" ~~> anExp.many(separatedBy: whitespaces).amid(whitespaces.?) <~~ ")" ^^^ { Expr.sExp($0.target, $0.range) }
+                "(" ~~> anExp.nonbacktracking().many(separatedBy: whitespaces).amid(whitespaces.?) <~~ ")" ^^^ { Expr.sExp($0.target, $0.range) }
 
-            static let anExp = anInt | anID | aSExp
+            static let anExp = anInt | anID | aSExp <!-- "an expression"
         }
 
         do {
-            let ast = try Grammar.anExp.amid(Grammar.whitespaces.optional()).parse("\n(+ (+ +1 -20) \n 2 3)")
+            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("(+ (+ 发 +1 -20) 2 3)")
             print("Checking source ranges:\n\(ast)")
         }
-        catch let error as ParseError {
+        catch let error as ParseFailure {
             XCTFail(error.description)
         }
     }
@@ -61,6 +61,8 @@ class ParseyTests: XCTestCase {
     static var allTests : [(String, (ParseyTests) -> () throws -> Void)] {
         return [
             ("testIntegers", testIntegers),
+            ("testSourceRange", testSourceRange),
+            ("testStrings", testStrings),
         ]
     }
 }

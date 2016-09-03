@@ -248,8 +248,6 @@ extension Parse : CustomStringConvertible {
 
 public struct Parser<Target> {
 
-    public typealias Error = ParseError
-
     public typealias Input = ParserInput
 
     public var run: (Input) throws -> Parse<Target>
@@ -264,8 +262,8 @@ public struct Parser<Target> {
         }
     }
 
-    public init(failure error: ParseError) {
-        self.init { _ in throw error }
+    public init(failure: ParseFailure) {
+        self.init { _ in throw failure }
     }
 
     public func parse(_ input: String) throws -> Target {
@@ -275,18 +273,20 @@ public struct Parser<Target> {
     public func parse(_ input: Input) throws -> Target {
         do {
             let output = try run(input)
-            guard output.rest.isEmpty else { throw ParseError.error(at: output.rest) }
+            guard output.rest.isEmpty else { throw ParseFailure(extraInputAt: output.rest) }
             return output.target
         }
     }
 
+    @available(*, deprecated, message: "Use | operator instead")
     public func or(_ other: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return Parser { input in
             do {
                 return try self.run(input)
             }
-            catch _ as ParseError {
-                return try other().run(input)
+            catch let failure as ParseFailure {
+                if failure.irrecoverable { throw failure }
+                else { return try other().run(input) }
             }
         }
     }
@@ -297,8 +297,9 @@ public struct Parser<Target> {
             do {
                 return try lhs.run(input)
             }
-            catch _ as ParseError {
-                return try rhs().run(input)
+            catch let failure as ParseFailure {
+                if failure.irrecoverable { throw failure }
+                else { return try rhs().run(input) }
             }
         }
     }

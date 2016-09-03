@@ -13,7 +13,7 @@ public enum Lexer {
     public static func character(_ char: Character) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, first == char else {
-                throw ParseError.expecting(char, at: input)
+                throw ParseFailure(expected: String(char), input: input)
             }
             return Parse(target: String(char), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
@@ -22,7 +22,7 @@ public enum Lexer {
     public static func anyCharacter(in range: ClosedRange<Character>) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, range.contains(first) else {
-                throw ParseError.expecting("a character within range \(range)", at: input)
+                throw ParseFailure(expected: "a character within range \(range)", input: input)
             }
             return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
@@ -33,7 +33,7 @@ public enum Lexer {
     {
         return Parser { input in
             guard let first = input.first, characters.contains(first) else {
-                throw ParseError.expecting("a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
+                throw ParseFailure(expected: "a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}", input: input)
             }
             return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
@@ -46,7 +46,7 @@ public enum Lexer {
     public static func anyCharacter(except exception: Character) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, first != exception else {
-                throw ParseError.expecting("any character except \"\(exception)\"", at: input)
+                throw ParseFailure(expected: "any character except \"\(exception)\"", input: input)
             }
             return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
@@ -57,7 +57,7 @@ public enum Lexer {
     {
         return Parser { input in
             guard let first = input.first, !exceptions.contains(first) else {
-                throw ParseError.expecting("any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}", at: input)
+                throw ParseFailure(expected: "any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}", input: input)
             }
             return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
         }
@@ -113,7 +113,7 @@ public extension Lexer {
                                         options: [ .anchored ],
                                         range: NSMakeRange(0, input.stream.count))
             guard let match = matches.first else {
-                throw ParseError.expecting("Pattern \"\(pattern)\"", at: input)
+                throw ParseFailure(expected: "Pattern \"\(pattern)\"", input: input)
             }
             let length = match.range.length
             let prefix = input.stream.prefix(length)
@@ -126,7 +126,7 @@ public extension Lexer {
     public static func string(_ string: String) -> Parser<String> {
         return Parser<String> { input in
             guard input.starts(with: string.characters) else {
-                throw ParseError.expecting("String \"\(string)\"", at: input)
+                throw ParseFailure(expected: "String \"\(string)\"", input: input)
             }
             return Parse(target: string,
                          range: input.location..<input.location.advanced(byScanning: string.characters),
@@ -151,8 +151,16 @@ extension Parser {
         return Lexer.string(lhs) ~~> rhs
     }
 
+    public static func !~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
+        return Lexer.string(lhs) !~~> rhs
+    }
+
     public static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
-        return lhs.ended(by: Lexer.string(rhs))
+        return lhs <~~ Lexer.string(rhs)
+    }
+
+    public static func !<~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
+        return lhs !<~~ Lexer.string(rhs)
     }
 
 }
