@@ -46,7 +46,7 @@ class ParseyTests: XCTestCase {
             print("Checking source ranges:\n\(ast)")
         }
         catch let error as ParseFailure {
-            XCTFail(error.description)
+            XCTAssertEqual(error.description, "Parse failure at 1:7 ----\n发 +1 -20) 2 3)\n\nExpecting an expression, but found \"发\"")
         }
     }
 
