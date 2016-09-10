@@ -8,17 +8,17 @@
 
 import Funky
 
-infix operator ~~> : FunctionCompositionPrecedence  /// Skipped to rhs
+infix operator ~~> : FunctionCompositionPrecedence  /// .skipped(to:)
 infix operator !~~> : FunctionCompositionPrecedence /// Non-backtracking ~~>
-infix operator <~~ : FunctionCompositionPrecedence  /// Ended by rhs
+infix operator <~~ : FunctionCompositionPrecedence  /// .ended(by:)
 infix operator !<~~ : FunctionCompositionPrecedence /// Non-backtracking <~~
 infix operator ~~ : FunctionCompositionPrecedence   /// Left and right forming a tuple
 infix operator !~~ : FunctionCompositionPrecedence  /// Non-backtracking ~~
 infix operator ** : FunctionCompositionPrecedence   /// Apply resulting func to rhs
 infix operator !** : FunctionCompositionPrecedence  /// Non-backtracking !**
-infix operator ^^ : FunctionCompositionPrecedence   /// .map
-infix operator ^^^ : FunctionCompositionPrecedence  /// .mapParse
-infix operator <!-- : FunctionCompositionPrecedence /// Tagged
+infix operator ^^ : FunctionCompositionPrecedence   /// .map(_:)
+infix operator ^^^ : FunctionCompositionPrecedence  /// .mapParse(_:)
+infix operator <!-- : FunctionCompositionPrecedence /// .tagged(_:)
 
 postfix operator .! /// Non-backtracking
 postfix operator .? /// Optional
@@ -159,7 +159,7 @@ public extension Parser {
         return flatMap { out1 in follower.map { out2 in (out1, out2) } }
     }
 
-    public func skippedTo<T>(by follower: Parser<T>) -> Parser<T> {
+    public func skipped<T>(to follower: Parser<T>) -> Parser<T> {
         return flatMap { _ in follower }
     }
 
@@ -172,11 +172,11 @@ public extension Parser {
     }
     
     public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
-        return lhs.skippedTo(by: rhs)
+        return lhs.skipped(to: rhs)
     }
 
     public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
-        return lhs.nonbacktracking().skippedTo(by: rhs)
+        return lhs.nonbacktracking().skipped(to: rhs)
     }
 
     public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
