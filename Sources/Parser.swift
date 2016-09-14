@@ -8,16 +8,13 @@
 
 import Funky
 
+/// Two dimentional text location with line number, column number and linear index
 public protocol TextLocation : Comparable {
-
     var line: Int { set get }
     var column: Int { set get }
     var index: Int { set get }
-
     static var initialPosition: Int { get }
-
     init(line: Int, column: Int, index: Int)
-
 }
 
 public extension TextLocation {
@@ -70,6 +67,8 @@ public extension TextLocation {
 
 }
 
+/// Text location for source code
+/// Initial position starts from 1
 public struct SourceLocation : TextLocation {
 
     public static let initialPosition = 1
@@ -85,18 +84,16 @@ public struct SourceLocation : TextLocation {
 }
 
 extension SourceLocation : CustomStringConvertible {
-
     public var description: String {
         return "\(line):\(column)"
     }
-    
 }
 
+/// Range from a source location to another, for range tracking
 public typealias SourceRange = Range<SourceLocation>
 
+/// Input with location tracking
 public struct ParserInput {
-
-    public typealias Stride = Int
 
     public let stream: String.CharacterView
     public let location: SourceLocation
@@ -136,13 +133,12 @@ public struct ParserInput {
 
 }
 
-/// Temporary workaround for a code-breaking change introduced 
-/// after the Swift 3 code-breaking change deadline.
-/// FIXME: To be removed when Xcode 8 beta 7 comes out
+/// To be removed when `Sequence.prefix(while:)` is implemented in the standard library
 extension Sequence where SubSequence : Sequence,
                          SubSequence.Iterator.Element == Iterator.Element,
                          SubSequence.SubSequence == SubSequence {
-    public func prefix(while predicate: (Iterator.Element) throws -> Bool) rethrows -> AnySequence<Iterator.Element> {
+    public func prefix(while predicate: (Iterator.Element) throws -> Bool)
+        rethrows -> AnySequence<Iterator.Element> {
         var result: [Iterator.Element] = []
         
         for element in self {
@@ -232,45 +228,64 @@ extension ParserInput : CustomStringConvertible {
 
 }
 
+/// Parse - noun. the result obtained by parsing a string or a text 
+/// Origin: mid 16th cent.: perhaps from Middle English pars ‘parts of speech,’
+///         from Old French pars ‘parts’ (influenced by Latin pars ‘part’).
 public struct Parse<Target> {
+
+    /// Target data structure from the parse
+    /// For example, with an s-expression parser:
+    ///     "1" gets parsed to .integer(1)
+    ///     "(+ 1 2)" gets parsed to .sExpression(.symbol(+), .integer(1), .integer(2))
     public var target: Target
-    public var range: Range<SourceLocation>
+    
+    /// Source range from the beginning of this parse to the end
+    /// For example, with an s-expression parser:
+    ///     The parse of "1" has range 1:1..<1:2
+    ///     The parse of the integer 1 in "(+ 1 2)" has range 1:4..<1:5
+    public var range: SourceRange
+
+    /// Rest of the stream to be parsed
     public var rest: ParserInput
 }
 
 extension Parse : CustomStringConvertible {
-
     public var description: String {
         return "\(range) : \(target)"
     }
-
 }
 
+/// Generic parser structure
 public struct Parser<Target> {
 
     public typealias Input = ParserInput
 
+    /// Embedded parsing function
     public var run: (Input) throws -> Parse<Target>
 
+    /// Custom parser initializer
     public init(run: @escaping (Input) throws -> Parse<Target>) {
         self.run = run
     }
 
+    /// Create a parser that always succeeds and outputs the specified target
     public init(success target: Target) {
         self.init { input in
             Parse(target: target, range: input.location..<input.location, rest: input)
         }
     }
 
+    /// Create a parser that always fails with the specified failure
     public init(failure: ParseFailure) {
         self.init { _ in throw failure }
     }
 
+    /// Parse a string
     public func parse(_ input: String) throws -> Target {
         return try parse(ParserInput(input))
     }
-    
-    public func parse(_ input: Input) throws -> Target {
+
+    private func parse(_ input: Input) throws -> Target {
         do {
             let output = try run(input)
             guard output.rest.isEmpty else { throw ParseFailure(extraInputAt: output.rest) }
@@ -291,8 +306,12 @@ public struct Parser<Target> {
         }
     }
 
-    public static func |(_ lhs: Parser<Target>,
-                         _ rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
+    /// | : 'Or' operator
+    /// If the left parser fails with a trivial (recoverrable) error,
+    /// then try the parser on the right side.
+    public static func |
+        (lhs: Parser<Target>,
+         rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return Parser { input in
             do {
                 return try lhs.run(input)
@@ -306,6 +325,7 @@ public struct Parser<Target> {
 
 }
 
+/// Monad
 extension Parser : FlatMappable {
     public typealias MapSource = Target
     public typealias MapTarget = Any
@@ -315,7 +335,8 @@ extension Parser : FlatMappable {
     public static func singleton(_ element: (Target)) -> Parser<Target> {
         return Parser(success: element)
     }
-    
+
+    /// Transform the target to another
     public func map<MapTarget>(_ transform: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
@@ -323,6 +344,7 @@ extension Parser : FlatMappable {
         }
     }
 
+    /// Apply the function result of a parser to the target
     public func apply<MapTarget>(_ transform: Parser<(Target) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
@@ -331,7 +353,7 @@ extension Parser : FlatMappable {
         }
     }
 
-   public func flatMap<MapTarget>(_ transform: @escaping (Target) -> Parser<MapTarget>) -> Parser<MapTarget> {
+    public func flatMap<MapTarget>(_ transform: @escaping (Target) -> Parser<MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target).run(out.rest)
@@ -339,6 +361,8 @@ extension Parser : FlatMappable {
         }
     }
 
+    /// Transform the parse to another
+    /// The parse (not parser!) contains source range information
     public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
@@ -346,6 +370,8 @@ extension Parser : FlatMappable {
         }
     }
 
+    /// Apply the function result of a parser to the target
+    /// The parse (not parser!) contains source range information
     public func applyParse<MapTarget>(_ transform: Parser<(Parse<Target>) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
@@ -354,7 +380,7 @@ extension Parser : FlatMappable {
         }
     }
 
-   public func flatMapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> Parser<MapTarget>) -> Parser<MapTarget> {
+    public func flatMapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> Parser<MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out).run(out.rest)

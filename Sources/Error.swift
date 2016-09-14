@@ -8,9 +8,10 @@
 
 import Funky
 
-public protocol ParseError : Error {
-    var expected: String { get set }
-    var input: ParserInput { get set }
+internal protocol ParseError : Error {
+    var expected: String { get }
+    var input: ParserInput { get }
+    init(expected: String, input: ParserInput)
 }
 
 public struct ParseFailure : ParseError {
@@ -30,7 +31,6 @@ public struct ParseFailure : ParseError {
 }
 
 extension ParseFailure : CustomStringConvertible {
-
     public var description: String {
         let first = input.first
         return "Parse failure at \(input)\n\nExpecting \(expected), but found \"\(first?.description ?? "")\""
@@ -39,6 +39,5 @@ extension ParseFailure : CustomStringConvertible {
     public var localizedDescription: String {
         return description
     }
-
 }
 

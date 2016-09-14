@@ -13,7 +13,6 @@ class ParseyTests: XCTestCase {
     }
 
     func testSourceRange() throws {
-        
         indirect enum Expr : CustomStringConvertible {
             case sExp([Expr], SourceRange)
             case int(Int, SourceRange)
@@ -50,9 +49,45 @@ class ParseyTests: XCTestCase {
         }
     }
 
+    func testLeftAssociativeOperator() throws {
+        indirect enum Expr : CustomStringConvertible {
+            case int(Int)
+            case sym(String)
+            case infixOp(String, Expr, Expr)
+
+            var description: String {
+                switch self {
+                case let .int(i): return i.description
+                case let .sym(s): return s
+                case let .infixOp(o, l, r): return "(\(o) \(l) \(r))"
+                }
+            }
+        }
+        enum Grammar {
+            static let int = Lexer.signedInteger ^^ {Int($0)!} ^^ Expr.int
+            static let sym = Lexer.regex("[a-zA-Z][0-9a-zA-Z]*") ^^ Expr.sym
+            static let addOp = Lexer.anyCharacter(in: "+-").amid(Lexer.whitespaces.?)
+                ^^ { op in { lhs, rhs in Expr.infixOp(op, lhs, rhs) } }
+            static let multOp = Lexer.anyCharacter(in: "*/").amid(Lexer.whitespaces.?)
+                ^^ { op in { lhs, rhs in Expr.infixOp(op, lhs, rhs) } }
+            static let multTerm = int | sym
+            static let mult = multTerm.infixedLeft(by: multOp)
+            static let add = mult.infixedLeft(by: addOp)
+            static let expr: Parser<Expr> = add | int | sym
+        }
+
+        do {
+            let ast = try Grammar.expr.parse("2+1+2*a+4*5+6")
+            print(ast)
+        }
+        catch let error as ParseFailure {
+            XCTFail(error.description)
+        }
+    }
+
     func testStrings() {
         do {
-            try XCTAssertEqual(Lexer.string("Hello").parse("Hello"), "Hello")
+            try XCTAssertEqual(Lexer.token("Hello").parse("Hello"), "Hello")
             try XCTAssertEqual(Lexer.regex("(Hello)*").parse("HelloHelloHello"), "HelloHelloHello")
             try XCTAssertEqual((Lexer.whitespaces ~~> Lexer.regex("(Hello)*")).parse(" HelloHelloHello"), "HelloHelloHello")
         }

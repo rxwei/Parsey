@@ -15,7 +15,11 @@ public enum Lexer {
             guard let first = input.first, first == char else {
                 throw ParseFailure(expected: String(char), input: input)
             }
-            return Parse(target: String(char), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
+            return Parse(
+                target: String(char),
+                range: input.location..<input.location.advanced(past: first),
+                rest: input.dropFirst()
+            )
         }
     }
 
@@ -24,7 +28,11 @@ public enum Lexer {
             guard let first = input.first, range.contains(first) else {
                 throw ParseFailure(expected: "a character within range \(range)", input: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
+            return Parse(
+                target: String(first),
+                range: input.location..<input.location.advanced(past: first),
+                rest: input.dropFirst()
+            )
         }
     }
 
@@ -33,9 +41,16 @@ public enum Lexer {
     {
         return Parser { input in
             guard let first = input.first, characters.contains(first) else {
-                throw ParseFailure(expected: "a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}", input: input)
+                throw ParseFailure(
+                    expected: "a character within {\(characters.map{"\"\($0)\""}.joined(separator: ", "))}",
+                    input: input
+                )
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
+            return Parse(
+                target: String(first),
+                range: input.location..<input.location.advanced(past: first),
+                rest: input.dropFirst()
+            )
         }
     }
 
@@ -48,7 +63,11 @@ public enum Lexer {
             guard let first = input.first, first != exception else {
                 throw ParseFailure(expected: "any character except \"\(exception)\"", input: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
+            return Parse(
+                target: String(first),
+                range: input.location..<input.location.advanced(past: first),
+                rest: input.dropFirst()
+            )
         }
     }
 
@@ -57,9 +76,15 @@ public enum Lexer {
     {
         return Parser { input in
             guard let first = input.first, !exceptions.contains(first) else {
-                throw ParseFailure(expected: "any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}", input: input)
+                throw ParseFailure(
+                    expected: "any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}",
+                    input: input)
             }
-            return Parse(target: String(first), range: input.location..<input.location.advanced(past: first), rest: input.dropFirst())
+            return Parse(
+                target: String(first),
+                range: input.location..<input.location.advanced(past: first),
+                rest: input.dropFirst()
+            )
         }
     }
 
@@ -94,14 +119,20 @@ import Foundation
 /// MARK: - String Matching
 public extension Lexer {
 
-    public static func string<S: Sequence>(until exception: S) -> Parser<String> where S.Iterator.Element == Character {
+    /// Parse a string until it sees a character in the exception list,
+    /// without consuming the character
+    public static func string<S: Sequence>(until exception: S) -> Parser<String>
+        where S.Iterator.Element == Character {
         return anyCharacter(except: exception).manyConcatenated()
     }
 
+    /// Parse a string until it sees a the exception character, 
+    /// without consuming the character
     public static func string(until character: Character) -> Parser<String> {
         return anyCharacter(except: character).manyConcatenated()
     }
 
+    /// Match regular expression
     public static func regex(_ pattern: String) -> Parser<String> {
         return Parser<String> { input in
             #if os(Linux)
@@ -113,7 +144,7 @@ public extension Lexer {
                                         options: [ .anchored ],
                                         range: NSMakeRange(0, input.stream.count))
             guard let match = matches.first else {
-                throw ParseFailure(expected: "Pattern \"\(pattern)\"", input: input)
+                throw ParseFailure(expected: "pattern \"\(pattern)\"", input: input)
             }
             let length = match.range.length
             let prefix = input.stream.prefix(length)
@@ -123,10 +154,23 @@ public extension Lexer {
         }
     }
 
+    /// Parse an explicit token
+    public static func token(_ token: String) -> Parser<String> {
+        return Parser<String> { input in
+            guard input.starts(with: token.characters) else {
+                throw ParseFailure(expected: "token \"\(token)\"", input: input)
+            }
+            return Parse(target: token,
+                         range: input.location..<input.location.advanced(byScanning: token.characters),
+                         rest: input.dropFirst(token.characters.count))
+        }
+    }
+
+    @available(*, deprecated, message: "Use 'token(_:)' instead")
     public static func string(_ string: String) -> Parser<String> {
         return Parser<String> { input in
             guard input.starts(with: string.characters) else {
-                throw ParseFailure(expected: "String \"\(string)\"", input: input)
+                throw ParseFailure(expected: "string \"\(string)\"", input: input)
             }
             return Parse(target: string,
                          range: input.location..<input.location.advanced(byScanning: string.characters),
@@ -136,31 +180,31 @@ public extension Lexer {
 
 }
 
-/// MARK: - Combinator Extension
-extension Parser {
+/// MARK: - Combinator extension on strings
+public extension Parser {
 
     public func amid(_ surrounding: String) -> Parser<Target> {
-        return amid(Lexer.string(surrounding))
+        return amid(Lexer.token(surrounding))
     }
 
     public func between(_ left: String, _ right: String) -> Parser<Target> {
-        return between(Lexer.string(left), Lexer.string(right))
+        return between(Lexer.token(left), Lexer.token(right))
     }
 
     public static func ~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
-        return Lexer.string(lhs) ~~> rhs
+        return Lexer.token(lhs) ~~> rhs
     }
 
     public static func !~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
-        return Lexer.string(lhs) !~~> rhs
+        return Lexer.token(lhs) !~~> rhs
     }
 
     public static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
-        return lhs <~~ Lexer.string(rhs)
+        return lhs <~~ Lexer.token(rhs)
     }
 
     public static func !<~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
-        return lhs !<~~ Lexer.string(rhs)
+        return lhs !<~~ Lexer.token(rhs)
     }
 
 }
