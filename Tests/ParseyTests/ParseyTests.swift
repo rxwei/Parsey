@@ -50,36 +50,48 @@ class ParseyTests: XCTestCase {
     }
 
     func testLeftAssociativeOperator() throws {
-        indirect enum Expr : CustomStringConvertible {
-            case int(Int)
-            case sym(String)
-            case infixOp(String, Expr, Expr)
+        indirect enum Expression : CustomStringConvertible {
+            case integer(Int)
+            case symbol(String)
+            case infix(String, Expression, Expression)
 
             var description: String {
                 switch self {
-                case let .int(i): return i.description
-                case let .sym(s): return s
-                case let .infixOp(o, l, r): return "(\(o) \(l) \(r))"
+                case let .integer(i): return i.description
+                case let .symbol(s): return s
+                case let .infix(o, l, r): return "(\(o) \(l) \(r))"
                 }
             }
         }
+
         enum Grammar {
-            static let int = Lexer.signedInteger ^^ {Int($0)!} ^^ Expr.int
-            static let sym = Lexer.regex("[a-zA-Z][0-9a-zA-Z]*") ^^ Expr.sym
-            static let addOp = Lexer.anyCharacter(in: "+-").amid(Lexer.whitespaces.?)
-                ^^ { op in { lhs, rhs in Expr.infixOp(op, lhs, rhs) } }
-            static let multOp = Lexer.anyCharacter(in: "*/").amid(Lexer.whitespaces.?)
-                ^^ { op in { lhs, rhs in Expr.infixOp(op, lhs, rhs) } }
-            static let multTerm = int | sym
-            static let mult = multTerm.infixedLeft(by: multOp)
-            static let add = mult.infixedLeft(by: addOp)
-            static let expr: Parser<Expr> = add | int | sym
+            static let integer = Lexer.signedInteger
+                ^^ {Int($0)!} ^^ Expression.integer
+
+            static let symbol = Lexer.regex("[a-zA-Z][0-9a-zA-Z]*")
+                ^^ Expression.symbol
+
+            static let addOp = Lexer.anyCharacter(in: "+-")
+                ^^ { op in { lhs, rhs in Expression.infix(op, lhs, rhs) } }
+            
+            static let multOp = Lexer.anyCharacter(in: "*/")
+                ^^ { op in { lhs, rhs in Expression.infix(op, lhs, rhs) } }
+
+            /// Left-associative multiplication
+            static let multiplication = (integer | symbol).infixedLeft(by: multOp)
+            /// Left-associative addition
+            static let addition = multiplication.infixedLeft(by: addOp)
+
+            static let expression: Parser<Expression> = addition
         }
 
         do {
-            let ast = try Grammar.expr.parse("2+1+2*a+4*5+6")
-            print(ast)
+            try print(Grammar.expression.parse("2"))
+            /// Result: 2
+            try print(Grammar.expression.parse("2+1+2*a+4*5+6"))
+            /// Result: (+ (+ (+ (+ 2 1) (* 2 a)) (* 4 5)) 6)
         }
+
         catch let error as ParseFailure {
             XCTFail(error.description)
         }
