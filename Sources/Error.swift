@@ -8,10 +8,9 @@
 
 import Funky
 
-internal protocol ParseError : Error {
+protocol ParseError : Error, CustomStringConvertible {
     var expected: String { get }
     var input: ParserInput { get }
-    init(expected: String, input: ParserInput)
 }
 
 public struct ParseFailure : ParseError {
@@ -28,6 +27,10 @@ public struct ParseFailure : ParseError {
         self.expected = "end of input"
         self.input = input
     }
+}
+
+public struct AccumulatedParseFailure : Error {
+    
 }
 
 extension ParseFailure : CustomStringConvertible {
