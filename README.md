@@ -6,17 +6,17 @@ backtracking prevention, and custom error messages.
 
 ## Features
 
-🔨✅ Combinator interface (`|`, `~~`, `~~>`, `<~~`, `^^` combinator operators)
+🔨 Combinator interface (`|`, `~~`, `~~>`, `<~~`, `^^` combinator operators)
 
-🔌✅ Lexer primitives (`Lexer.whitespace`, `Lexer.signedInteger`, ...)
+🔌 Lexer primitives (`Lexer.whitespace`, `Lexer.signedInteger`, ...)
 
-✋✅ Backtracking prevention (`.!` postfix operator or `.nonbacktracking()`)
+✋ Backtracking prevention (`.!` postfix operator or `.nonbacktracking()`)
 
-🔖✅  Parser tagging for error messages (`<!--` operator or `.tagged(_:)`)
+🔖 Parser tagging for error messages (`<!--` operator or `.tagged(_:)`)
 
-❗️✅  Rich error messages with source location
+❗️ Rich error messages with source location
 
-📐✅  Source range tracking (`^^^` operator or `.mapParse(_:)`)
+📐 Source range tracking (`^^^` operator or `.mapParse(_:)`)
 
 ## Requirements
 
