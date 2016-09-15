@@ -1,17 +1,22 @@
 # Parsey
-Swift Parser Combinator Framework
+Swift Parser Combinator Framework 🔧
 
 In addition to simple combinators, **Parsey** supports source location/range tracking, 
 backtracking prevention, and custom error messages.
 
 ## Features
 
-- [x] Combinator interface (`|`, `~~`, `~~>`, `<~~`, `^^` combinator operators)
-- [x] Lexer primitives (`Lexer.whitespace`, `Lexer.signedInteger`, ...)
-- [x] Backtracking prevention (`.!` postfix operator or `.nonbacktracking()`)
-- [x] Parser tagging for error message (`<!--` operator or `.tagged(_:)`)
-- [x] Rich error messages with source location
-- [x] Source range tracking (`^^^` operator or `.mapParse(_:)`)
+🔨✅ Combinator interface (`|`, `~~`, `~~>`, `<~~`, `^^` combinator operators)
+
+🔌✅ Lexer primitives (`Lexer.whitespace`, `Lexer.signedInteger`, ...)
+
+✋✅ Backtracking prevention (`.!` postfix operator or `.nonbacktracking()`)
+
+🔖✅  Parser tagging for error messages (`<!--` operator or `.tagged(_:)`)
+
+❗️✅  Rich error messages with source location
+
+📐✅  Source range tracking (`^^^` operator or `.mapParse(_:)`)
 
 ## Requirements
 
@@ -19,7 +24,7 @@ backtracking prevention, and custom error messages.
 
 - Any operating system
 
-## Package
+## 📦 Package
 
 To use it in your Swift project, add the following dependency to your 
 Swift package description file.
@@ -28,13 +33,13 @@ Swift package description file.
     .Package(url: "https://github.com/rxwei/Parsey", majorVersion: 1)
 ```
 
-## Examples
+## ⚙ Examples
 
-### An LLVM Compiler Frontend written in Swift using **Parsey**
+### 0️⃣ An LLVM Compiler Frontend written in Swift using **Parsey**
 
 [The COOL Programming Language](https://github.com/rxwei/COOL)
 
-### Parse Left-associative Infix Expressions with Operator Precedence
+### 1️⃣ Parse Left-associative Infix Expressions with Operator Precedence
 
 ```swift
 indirect enum Expression {
@@ -76,7 +81,7 @@ try print(Grammar.expression.parse("2+1+2*a"))
 ///                  .infix("*", .integer(2), .symbol("a")))
 ```
 
-### Parse S-Expressions
+### 2️⃣ Parse S-Expressions
 
 ```swift
 indirect enum Expr {
@@ -106,7 +111,7 @@ try Grammar.anExp.parse("(+ (+ 龘 1 -20) 2 3)")
 ///         Expecting an expression, but found "龘"
 ```
 
-### Parse S-Expressions with Source Range Tracking
+### 3️⃣ Parse S-Expressions with Source Range Tracking
 
 ```swift
 indirect enum Expr {
