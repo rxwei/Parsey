@@ -4,6 +4,8 @@ Swift Parser Combinator Framework 🔧
 In addition to simple combinators, **Parsey** supports source location/range tracking, 
 backtracking prevention, and custom error messages.
 
+![Parsey Playground](https://pbs.twimg.com/media/CrVaoBeVYAAWWoj.jpg:large)
+
 ## Features
 
 🔨 Combinator interface (`|`, `~~`, `~~>`, `<~~`, `^^` combinator operators)
