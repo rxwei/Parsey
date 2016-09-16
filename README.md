@@ -107,10 +107,11 @@ try Grammar.anExp.parse("(+ (+ 1 -20) 2 3)")
 /// Output: Expr.sExp(...)
 
 /// Failure
-try Grammar.anExp.parse("(+ (+ 龘 1 -20) 2 3)")
-/// Output: Parse failure at 1:7 ----
-///           龘 1 -20) 2 3)
-///         Expecting an expression, but found "龘"
+try Grammar.anExp.parse("(+ \n(+ %% 1 -20) 2 3)")
+/// Output: Parse failure at 2:4 ----
+///         (+ %% 1 -20) 2 3)
+///            ^~~~~~~~~~~~~~
+///         Expecting an expression, but found "%"
 ```
 
 ### 3️⃣ Parse S-Expressions with Source Range Tracking
@@ -143,10 +144,11 @@ try Grammar.anExp.parse("(+ (+ 1 -20) 2 3)")
 /// Output: Expr.sExp(...)
 
 /// Failure
-try Grammar.anExp.parse("(+ (+ 龘 1 -20) 2 3)")
-/// Output: Parse failure at 1:7 ----
-///           龘 1 -20) 2 3)
-///         Expecting an expression, but found "龘"
+try Grammar.anExp.parse("(+ \n(+ %% 1 -20) 2 3)")
+/// Output: Parse failure at 2:4 ----
+///         (+ %% 1 -20) 2 3)
+///            ^~~~~~~~~~~~~~
+///         Expecting an expression, but found "%"
 ```
 
 ## Dependency
