@@ -190,9 +190,10 @@ extension ParserInput : Sequence {
             guard try predicate(char) else { break }
             if char == "\n" {
                 newLinePrefixLength += newLoc.column
-                newLoc = newLoc.newLine()
+                newLoc.line += 1
+                newLoc.column = 1
             } else {
-                newLoc = newLoc.advanced(by: 1)
+                newLoc.column += 1
             }
         }
         return ParserInput(lineStream: lineStream.dropFirst(newLinePrefixLength), at: newLoc)
@@ -239,7 +240,7 @@ extension ParserInput : CustomStringConvertible {
     public var description: String {
         let index = line.index(line.startIndex, offsetBy: columnIndex)
         let prefixLength = lineStream.prefix(upTo: index).count
-        let suffixLength = lineStream.suffix(from: index).count
+        let suffixLength = line.characters.count - prefixLength
         var locator = Array<Character>(repeating: " ", count: prefixLength)
         locator.append("^")
         if suffixLength != 0 {
