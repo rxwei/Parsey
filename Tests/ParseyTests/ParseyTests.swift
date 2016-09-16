@@ -41,11 +41,11 @@ class ParseyTests: XCTestCase {
         }
 
         do {
-            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("(+ (+ 发 +1 -20) 2 3)")
+            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("\n(+ \n\n(+ +1 -20) 2 3)")
             print("Checking source ranges:\n\(ast)")
         }
         catch let error as ParseFailure {
-            XCTAssertEqual(error.description, "Parse failure at 1:7 ----\n发 +1 -20) 2 3)\n\nExpecting an expression, but found \"发\"")
+            print(error.description)
         }
     }
 
@@ -91,7 +91,6 @@ class ParseyTests: XCTestCase {
             try print(Grammar.expression.parse("2+1+2*a+4*5+6"))
             /// Result: (+ (+ (+ (+ 2 1) (* 2 a)) (* 4 5)) 6)
         }
-
         catch let error as ParseFailure {
             XCTFail(error.description)
         }

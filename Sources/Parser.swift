@@ -95,8 +95,21 @@ public typealias SourceRange = Range<SourceLocation>
 /// Input with location tracking
 public struct ParserInput {
 
-    public let stream: String.CharacterView
+    public let lineStream: String.CharacterView
+    
     public let location: SourceLocation
+
+    public var stream: String.CharacterView {
+        return lineStream.dropFirst(columnIndex)
+    }
+
+    public var line: String {
+        return String(lineStream.prefix(while: !="\n"))
+    }
+
+    public var columnIndex: Int {
+        return location.column - 1
+    }
 
     public var isEmpty: Bool {
         return stream.isEmpty
@@ -110,28 +123,29 @@ public struct ParserInput {
         return String(stream)
     }
 
-    public init(_ string: String, at location: SourceLocation = SourceLocation()) {
-        self.stream = string.characters
+    public init(_ string: String) {
+        self.lineStream = string.characters
+        self.location = .init()
+    }
+
+    public init<S: Sequence>(_ stream: S) where S.Iterator.Element == Character {
+        self.lineStream = String.CharacterView(stream)
+        self.location = .init()
+    }
+
+    internal init(lineStream: String.CharacterView, at location: SourceLocation = SourceLocation()) {
+        self.lineStream = lineStream
         self.location = location
     }
 
-    public init<S: Sequence>(_ stream: S, at location: SourceLocation = SourceLocation())
-        where S.Iterator.Element == Character {
-        self.stream = String.CharacterView(stream)
-        self.location = location
-    }
-
-    public init(_ stream: String.CharacterView, at location: SourceLocation = SourceLocation()) {
-        self.stream = stream
-        self.location = location
-    }
-
-    public init(emptyStreamAt location: SourceLocation = SourceLocation()) {
-        self.stream = String.CharacterView()
-        self.location = location
+    internal init() {
+        self.lineStream = String.CharacterView()
+        self.location = SourceLocation()
     }
 
 }
+
+/// FIXME: Implement indexing for line stream
 
 /// To be removed when `Sequence.prefix(while:)` is implemented in the standard library
 extension Sequence where SubSequence : Sequence,
@@ -154,15 +168,12 @@ extension Sequence where SubSequence : Sequence,
 extension ParserInput : Sequence {
 
     public func prefix(_ maxLength: Int) -> ParserInput {
-        return ParserInput(stream.prefix(maxLength), at: location)
-    }
-
-    public func prefix(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
-        return try ParserInput(stream.prefix(while: predicate), at: location)
+        return ParserInput(lineStream: lineStream.prefix(maxLength), at: location)
     }
 
     public func suffix(_ maxLength: Int) -> ParserInput {
-        return ParserInput(stream.suffix(maxLength), at: location)
+        let prefixLength = stream.count - maxLength
+        return prefixLength < 0 ? self : dropFirst(prefixLength)
     }
 
     public typealias Iterator = String.CharacterView.Iterator
@@ -174,42 +185,46 @@ extension ParserInput : Sequence {
 
     public func drop(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
         var newLoc = location
-        var rest = stream
+        var newLinePrefixLength = 0
         for char in stream {
             guard try predicate(char) else { break }
-            rest.removeFirst()
             if char == "\n" {
-                newLoc.line += 1
-                newLoc.column = 0
+                newLinePrefixLength += newLoc.column
+                newLoc = newLoc.newLine()
             } else {
-                newLoc.column += 1
+                newLoc = newLoc.advanced(by: 1)
             }
         }
-        return ParserInput(rest, at: newLoc)
+        return ParserInput(lineStream: lineStream.dropFirst(newLinePrefixLength), at: newLoc)
     }
 
     public func dropFirst() -> ParserInput {
         guard let first = stream.first else { return self }
-        let newLoc = first == "\n" ? location.newLine() : location.advanced(by: 1)
-        return ParserInput(stream.dropFirst(), at: newLoc)
+        let (newStream, newLoc) = first == "\n"
+                                ? (lineStream.dropFirst(location.column), location.newLine())
+                                : (lineStream, location.advanced(by: 1))
+        return ParserInput(lineStream: newStream, at: newLoc)
     }
 
     public func dropFirst(_ n: Int) -> ParserInput {
         let prefix = stream.prefix(n)
-        let newLoc = prefix.reduce(location) { loc, x in
-            x == "\n" ? location.newLine() : location.advanced(by: 1)
+        let (newStream, newLoc) = prefix.reduce((lineStream, location)) { acc, x in
+            x == "\n" ? (acc.0.dropFirst(), acc.1.newLine())
+                      : (acc.0, acc.1.advanced(by: 1))
         }
-        return ParserInput(stream.dropFirst(n), at: newLoc)
+        return ParserInput(lineStream: newStream, at: newLoc)
     }
 
     public func dropLast() -> ParserInput {
-        return ParserInput(stream.dropLast(), at: location)
+        return ParserInput(lineStream: stream.dropLast(), at: location)
     }
 
     public func dropLast(_ n: Int) -> ParserInput {
-        return ParserInput(stream.dropLast(n), at: location)
+        return ParserInput(lineStream: stream.dropLast(n), at: location)
     }
 
+    /// TODO: Need location tracking!
+    /// It does not matter for the parser since it's never used
     public func split(maxSplits: Int, omittingEmptySubsequences: Bool,
                       whereSeparator isSeparator: (Character) throws -> Bool) rethrows -> [ParserInput] {
         return try stream.split(maxSplits: maxSplits,
@@ -222,8 +237,15 @@ extension ParserInput : Sequence {
 extension ParserInput : CustomStringConvertible {
 
     public var description: String {
-        let streamPrint = String(stream.prefix(50))
-        return "\(location) ----\n\(streamPrint)"
+        let index = line.index(line.startIndex, offsetBy: columnIndex)
+        let prefixLength = lineStream.prefix(upTo: index).count
+        let suffixLength = lineStream.suffix(from: index).count
+        var locator = Array<Character>(repeating: " ", count: prefixLength)
+        locator.append("^")
+        if suffixLength != 0 {
+            for _ in 1..<suffixLength { locator.append("~") }
+        }
+        return "\(location) ----\n\(line)\n\(String(locator))"
     }
 
 }

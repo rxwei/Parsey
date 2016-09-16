@@ -29,14 +29,10 @@ public struct ParseFailure : ParseError {
     }
 }
 
-public struct AccumulatedParseFailure : Error {
-    
-}
-
 extension ParseFailure : CustomStringConvertible {
     public var description: String {
         let first = input.first
-        return "Parse failure at \(input)\n\nExpecting \(expected), but found \"\(first?.description ?? "")\""
+        return "Parse failure at \(input)\nExpecting \(expected), but found \"\(first?.description ?? "")\""
     }
 
     public var localizedDescription: String {
