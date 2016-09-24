@@ -1,5 +1,5 @@
 # Parsey
-Swift Parser Combinator Framework 🔧
+Swift Parser Combinator Framework
 
 In addition to simple combinators, **Parsey** supports source location/range tracking, 
 backtracking prevention, and custom error messages.
@@ -8,13 +8,13 @@ backtracking prevention, and custom error messages.
 
 ## Features
 
-- 🔨 Combinator interface
+- Combinator interface
     - `|`, `~~`, `~~>`, `<~~`, `^^` combinator operators
 
-- 🔌 Lexer primitives: 
+- Lexer primitives: 
     - `Lexer.whitespace`, `Lexer.signedInteger`, ...
 
-- 🔗 Regex-like combinators:
+- Regex-like combinators:
     - Postfix `.+` for `.many()`.
         - Example: `let arrayLiteral = "[" ~~> expression.+ <~~ "]"`
     - Postfix `.*` for `.manyOrNone()`.
@@ -28,13 +28,13 @@ backtracking prevention, and custom error messages.
     - `Lexer.regex(_:)` for directly applying regular expressions.
         - Example: `let id = Lexer.regex("[a-zA-Z][a-zA-Z0-9]*")`
 
-- ✋ Backtracking prevention 
+- Backtracking prevention 
     - `.!` postfix operator or `.nonbacktracking()`
 
-- 🔖 Parser tagging for error messages
+- Parser tagging for error messages
     - `<!--` operator or `.tagged(_:)`
 
-- ❗️ Rich error messages with source location
+- Rich error messages with source location
     - For example:
     ```
     Parse failure at 2:4 ----
@@ -43,7 +43,7 @@ backtracking prevention, and custom error messages.
     Expecting an expression, but found "%"
     ```
 
-- 📐 Source range tracking
+- Source range tracking
     - `^^^` operator or `.mapParse(_:)`
     - For example, S-expression `\n(+ \n\n(+ +1 -20) 2 3)` gets parsed to
       the following range-tracked AST:
@@ -64,7 +64,7 @@ backtracking prevention, and custom error messages.
 
 - Any operating system
 
-## 📦 Package
+## Package
 
 To use it in your Swift project, add the following dependency to your 
 Swift package description file.
@@ -171,8 +171,8 @@ enum Grammar {
         ^^^ { Expr.id($0.target, $0.range) }
 
     static let aSExp: Parser<Expr> =
-      "(" ~~> (anExp.!).many(separatedBy: whitespaces).amid(whitespaces.?) <~~ ")"
-      ^^^ { Expr.sExp($0.target, $0.range) }
+        "(" ~~> (anExp.!).many(separatedBy: whitespaces).amid(whitespaces.?) <~~ ")"
+        ^^^ { Expr.sExp($0.target, $0.range) }
 
     static let anExp = anInt | anID | aSExp <!-- "an expression"
 }
