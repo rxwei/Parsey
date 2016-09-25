@@ -41,7 +41,7 @@ class ParseyTests: XCTestCase {
         }
 
         do {
-            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("\n(+ \n\n(+ +1 -20) 2 3)")
+            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("\n(+ \n\n(+ +1 -1)\n 2 3)")
             print("Checking source ranges:\n\(ast)")
         }
         catch let error as ParseFailure {
