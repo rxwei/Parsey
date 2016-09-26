@@ -115,12 +115,12 @@ extension ParserInput : Sequence {
     public func drop(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
         var newLoc = location
         var newStream = stream
-        var newLineIndex: String.CharacterView.Index = lineStream.startIndex
+        var newLineStream = lineStream
         for char in stream {
             guard try predicate(char) else { break }
             newStream = newStream.dropFirst()
             if char == "\n" {
-                newLineIndex = newStream.startIndex
+                newLineStream = newStream
                 newLoc = newLoc.newLine()
             } else {
                 newLoc = newLoc.advanced(by: 1)
@@ -128,7 +128,7 @@ extension ParserInput : Sequence {
         }
         return ParserInput(
             stream: newStream,
-            lineStream: lineStream.suffix(from: newLineIndex),
+            lineStream: newLineStream,
             at: newLoc
         )
     }
@@ -139,7 +139,7 @@ extension ParserInput : Sequence {
             let newStream = stream.dropFirst()
             return ParserInput(
                 stream: newStream,
-                lineStream: newStream.suffix(from: newStream.startIndex),
+                lineStream: newStream,
                 at: location.newLine()
             )
         }
@@ -153,13 +153,13 @@ extension ParserInput : Sequence {
     public func dropFirst(_ n: Int) -> ParserInput {
         var newLoc = location
         var newStream = stream
-        var newLineIndex: String.CharacterView.Index = lineStream.startIndex
+        var newLineStream = lineStream
         for _ in 0..<n {
             guard !newStream.isEmpty else { break }
             let char = newStream.first
             newStream = newStream.dropFirst()
             if char == "\n" {
-                newLineIndex = newStream.startIndex
+                newLineStream = newStream
                 newLoc = newLoc.newLine()
             } else {
                 newLoc = newLoc.advanced(by: 1)
@@ -167,7 +167,7 @@ extension ParserInput : Sequence {
         }
         return ParserInput(
             stream: newStream,
-            lineStream: lineStream.suffix(from: newLineIndex),
+            lineStream: newLineStream,
             at: newLoc
         )
     }
