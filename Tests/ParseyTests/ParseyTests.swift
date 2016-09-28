@@ -28,7 +28,7 @@ class ParseyTests: XCTestCase {
         }
 
         enum Grammar {
-            static let whitespaces = (Lexer.space | Lexer.tab | Lexer.newLine)+
+            static let whitespaces = Lexer.regex("[ \n\r]+")
             static let anInt = Lexer.signedInteger ^^^ { Expr.int(Int($0.target)!, $0.range) }
             static let anID = Lexer.regex("[a-zA-Z_+\\-*/][0-9a-zA-Z_+\\-*/]*").mapParse { parse in
                 Expr.id(parse.target, parse.range)
@@ -41,7 +41,7 @@ class ParseyTests: XCTestCase {
         }
 
         do {
-            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("\n(+ \n\n(+ +1 -1)\n 2 3)")
+            let ast = try Grammar.anExp.amid(Grammar.whitespaces.?).parse("\n(+\n\n \n(+ +1 -1)\n 2 3)")
             print("Checking source ranges:\n\(ast)")
         }
         catch let error as ParseFailure {

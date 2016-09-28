@@ -8,18 +8,26 @@
 
 import Funky
 
+internal extension Parse {
+
+    init(input: ParserInput, target: Target, length: Int) {
+        self.rest = input.dropFirst(length)
+        self.range = input.location..<rest.location
+        self.target = target
+    }
+
+}
+
 public enum Lexer {
+    
+    /// TODO: Remove duplicate code in here
 
     public static func character(_ char: Character) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, first == char else {
                 throw ParseFailure(expected: String(char), input: input)
             }
-            return Parse(
-                target: String(char),
-                range: input.location..<input.location.advanced(past: first),
-                rest: input.dropFirst()
-            )
+            return Parse(input: input, target: String(first), length: 1)
         }
     }
 
@@ -28,11 +36,7 @@ public enum Lexer {
             guard let first = input.first, range.contains(first) else {
                 throw ParseFailure(expected: "a character within range \(range)", input: input)
             }
-            return Parse(
-                target: String(first),
-                range: input.location..<input.location.advanced(past: first),
-                rest: input.dropFirst()
-            )
+            return Parse(input: input, target: String(first), length: 1)
         }
     }
 
@@ -46,11 +50,7 @@ public enum Lexer {
                     input: input
                 )
             }
-            return Parse(
-                target: String(first),
-                range: input.location..<input.location.advanced(past: first),
-                rest: input.dropFirst()
-            )
+            return Parse(input: input, target: String(first), length: 1)
         }
     }
 
@@ -63,11 +63,7 @@ public enum Lexer {
             guard let first = input.first, first != exception else {
                 throw ParseFailure(expected: "any character except \"\(exception)\"", input: input)
             }
-            return Parse(
-                target: String(first),
-                range: input.location..<input.location.advanced(past: first),
-                rest: input.dropFirst()
-            )
+            return Parse(input: input, target: String(first), length: 1)
         }
     }
 
@@ -80,11 +76,7 @@ public enum Lexer {
                     expected: "any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}",
                     input: input)
             }
-            return Parse(
-                target: String(first),
-                range: input.location..<input.location.advanced(past: first),
-                rest: input.dropFirst()
-            )
+            return Parse(input: input, target: String(first), length: 1)
         }
     }
 
@@ -135,22 +127,22 @@ public extension Lexer {
     /// Match regular expression
     public static func regex(_ pattern: String) -> Parser<String> {
         return Parser<String> { input in
-            #if os(Linux)
+            #if os(Linux) /// Swift standard library inconsistency!
             let regex = try RegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
             #else
             let regex = try NSRegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
             #endif
-            let matches = regex.matches(in: input.text,
-                                        options: [ .anchored ],
-                                        range: NSMakeRange(0, input.stream.count))
+            let text = input.text
+            let matches = regex.matches(
+                in: text,
+                options: [ .anchored ],
+                range: NSMakeRange(0, input.stream.count)
+            )
             guard let match = matches.first else {
                 throw ParseFailure(expected: "pattern \"\(pattern)\"", input: input)
             }
-            let length = match.range.length
-            let prefix = input.stream.prefix(length)
-            return Parse(target: String(prefix),
-                         range: input.location..<input.location.advanced(byScanning: prefix),
-                         rest: input.dropFirst(length))
+            let matchedText = (text as NSString).substring(to: match.range.length)
+            return Parse(input: input, target: matchedText, length: matchedText.characters.count)
         }
     }
 
@@ -160,21 +152,7 @@ public extension Lexer {
             guard input.starts(with: token.characters) else {
                 throw ParseFailure(expected: "token \"\(token)\"", input: input)
             }
-            return Parse(target: token,
-                         range: input.location..<input.location.advanced(byScanning: token.characters),
-                         rest: input.dropFirst(token.characters.count))
-        }
-    }
-
-    @available(*, deprecated, message: "Use 'token(_:)' instead")
-    public static func string(_ string: String) -> Parser<String> {
-        return Parser<String> { input in
-            guard input.starts(with: string.characters) else {
-                throw ParseFailure(expected: "string \"\(string)\"", input: input)
-            }
-            return Parse(target: string,
-                         range: input.location..<input.location.advanced(byScanning: string.characters),
-                         rest: input.dropFirst(string.characters.count))
+            return Parse(input: input, target: token, length: token.characters.count)
         }
     }
 
