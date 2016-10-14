@@ -141,7 +141,8 @@ public extension Lexer {
             guard let match = matches.first else {
                 throw ParseFailure(expected: "pattern \"\(pattern)\"", input: input)
             }
-            let matchedText = (text as NSString).substring(to: match.range.length)
+            /// UTF16 conversion is safe here since NSRegularExpression results are based on UTF16
+            let matchedText = String(text.utf16.prefix(match.range.length))!
             return Parse(input: input, target: matchedText, length: matchedText.characters.count)
         }
     }
