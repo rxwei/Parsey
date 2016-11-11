@@ -226,7 +226,7 @@ public extension Parser {
     ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedRight(byOperator op: Parser<(Target, Target) -> Target>) -> Parser<Target> {
+    public func infixedRight(by op: Parser<(Target, Target) -> Target>) -> Parser<Target> {
         func scan() -> Parser<Target> {
             return flatMap(rest)
         }
