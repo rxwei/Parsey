@@ -199,12 +199,30 @@ public extension Parser {
             }
         }
     }
+    
+    /// Accept input one or more times, separated by some separator
+    /// - parameter separator: separator
+    /// - returns: the composed parser
+    public func many(separatedBy separator: String) -> Parser<[Target]> {
+        return flatMap { out in
+            Lexer.token(separator).skipped(to: self).manyOrNone().map { outs in
+                [out] + outs
+            }
+        }
+    }
 
     /// Accept input zero or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
     public func manyOrNone<T>(separatedBy separator: Parser<T>) -> Parser<[Target]> {
         return many(separatedBy: separator) | Parser<[Target]>(success: [])
+    }
+
+    /// Accept input zero or more times, separated by some separator
+    /// - parameter separator: parser of a separater
+    /// - returns: the composed parser
+    public func manyOrNone(separatedBy separator: String) -> Parser<[Target]> {
+        return many(separatedBy: Lexer.token(separator)) | Parser<[Target]>(success: [])
     }
 
     /// Suffix operation parser
