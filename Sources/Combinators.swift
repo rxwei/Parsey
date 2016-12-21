@@ -16,9 +16,11 @@ infix operator ~~   : FunctionCompositionPrecedence /// Left and right forming a
 infix operator !~~  : FunctionCompositionPrecedence /// Non-backtracking ~~
 infix operator **   : FunctionCompositionPrecedence /// Apply lhs's result function to rhs's result
 infix operator !**  : FunctionCompositionPrecedence /// Non-backtracking !**
+infix operator ^^=  : FunctionCompositionPrecedence /// .map { _ in ... }
 infix operator ^^   : FunctionCompositionPrecedence /// .map(_:)
 infix operator ^^^  : FunctionCompositionPrecedence /// .mapParse(_:)
 infix operator !^^  : FunctionCompositionPrecedence /// .nonbacktracking().map(_:)
+infix operator !^^=  : FunctionCompositionPrecedence /// .nonbacktracking().map { _ in ... }
 infix operator !^^^ : FunctionCompositionPrecedence /// .nonbacktracking().mapParse(_:)
 infix operator <!-- : FunctionCompositionPrecedence /// .tagged(_:)
 infix operator ..   : FunctionCompositionPrecedence /// .tagged(_:)
@@ -199,7 +201,7 @@ public extension Parser {
             }
         }
     }
-    
+
     /// Accept input one or more times, separated by some separator
     /// - parameter separator: separator
     /// - returns: the composed parser
@@ -375,7 +377,7 @@ public extension Parser {
     /// Transform the target to the desired data structure
     /// - returns: the composed parser
     @inline(__always)
-    public static func ^^ <MapTarget>(
+    public static func ^^= <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
         return lhs.map { _ in rhs }
     }
@@ -396,7 +398,7 @@ public extension Parser {
     }
 
     @inline(__always)
-    public static func !^^ <MapTarget>(
+    public static func !^^= <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().map { _ in rhs }
     }
