@@ -21,6 +21,7 @@ infix operator ^^^  : FunctionCompositionPrecedence /// .mapParse(_:)
 infix operator !^^  : FunctionCompositionPrecedence /// .nonbacktracking().map(_:)
 infix operator !^^^ : FunctionCompositionPrecedence /// .nonbacktracking().mapParse(_:)
 infix operator <!-- : FunctionCompositionPrecedence /// .tagged(_:)
+infix operator ..   : FunctionCompositionPrecedence /// .tagged(_:)
 
 postfix operator .! /// Non-backtracking
 postfix operator .? /// Optional
@@ -56,6 +57,7 @@ public extension Parser {
     /// Equivalent to `<!--` operator
     /// - parameter tag: tag string
     /// - returns: the tagged parser
+    @inline(__always)
     public func tagged(_ tag: String) -> Parser<Target> {
         return Parser { input in
             do {
@@ -71,7 +73,17 @@ public extension Parser {
     /// Tag with description for clear error messages
     /// Equivalent to `.tagged(_:)`
     /// - returns: the tagged parser
+    @available(*, renamed: "..")
+    @inline(__always)
     public static func <!--(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
+        return lhs.tagged(rhs)
+    }
+
+    /// Tag with description for clear error messages
+    /// Equivalent to `.tagged(_:)`
+    /// - returns: the tagged parser
+    @inline(__always)
+    public static func ..(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
         return lhs.tagged(rhs)
     }
 
@@ -172,6 +184,7 @@ public extension Parser {
     /// Equivalent to `.between(surrounding, surrounding)`
     /// - parameter surrounding: parser of the surrounding
     /// - returns: the composed parser
+    @inline(__always)
     public func amid<T>(_ surrounding: Parser<T>) -> Parser<Target> {
         return between(surrounding, surrounding)
     }
@@ -257,18 +270,21 @@ public extension Parser {
     /// Equivalent to `~~>` operator.
     /// - parameter follower: the parser of the rest input
     /// - returns: the composed parser
+    @inline(__always)
     public func skipped<T>(to follower: Parser<T>) -> Parser<T> {
         return flatMap { _ in follower }
     }
 
     /// Drop the result
     /// - returns: same parser without output
+    @inline(__always)
     public func skipped() -> Parser<()> {
         return map { _ in () }
     }
 
     /// Make optional
     /// - returns: the composed parser that accepts the original input or nothing
+    @inline(__always)
     public func optional() -> Parser<Target?> {
         return map{$0} | .return(nil)
     }
@@ -276,10 +292,12 @@ public extension Parser {
     /// Parse the right side on success, producing only the result from the right.
     /// Same as `.skipped(to:)`
     /// - returns: the composed parser
+    @inline(__always)
     public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
         return lhs.skipped(to: rhs)
     }
 
+    @inline(__always)
     public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
         return lhs.nonbacktracking().skipped(to: rhs)
     }
@@ -287,10 +305,12 @@ public extension Parser {
     /// Parse the right side on success, producing the original (left) result.
     /// Same as `.ended(by:)`
     /// - returns: the composed parser
+    @inline(__always)
     public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
+    @inline(__always)
     public static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
         return lhs.nonbacktracking().ended(by: rhs)
     }
@@ -299,10 +319,12 @@ public extension Parser {
     /// the left and the right.
     /// Same as `.followed(by:)`
     /// - returns: the composed parser
+    @inline(__always)
     static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
         return lhs.followed(by: rhs)
     }
     
+    @inline(__always)
     static public func !~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
         return lhs.nonbacktracking().followed(by: rhs)
     }
@@ -311,11 +333,13 @@ public extension Parser {
     /// the left and the right.
     /// Same as `.followed(by:)`
     /// - returns: the composed parser
+    @inline(__always)
     public static func ** <MapTarget>(
         _ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.apply(lhs)
     }
 
+    @inline(__always)
     public static func !** <MapTarget>(
         _ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.nonbacktracking().apply(lhs)
@@ -324,40 +348,61 @@ public extension Parser {
     /// Transform the target to the desired data structure
     /// Same as `.map(_:)`
     /// - returns: the composed parser
+    @inline(__always)
     public static func ^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return lhs.map(rhs)
     }
 
+    /// Transform the target to the desired data structure
+    /// - returns: the composed parser
+    @inline(__always)
+    public static func ^^ <MapTarget>(
+        _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
+        return lhs.map { _ in rhs }
+    }
+
     /// Transform the parse to the desired data structure
     /// Same as `.mapParse(_:)`
     /// - returns: the composed parser
+    @inline(__always)
     public static func ^^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.mapParse(rhs)
     }
 
+    @inline(__always)
     public static func !^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().map(rhs)
     }
 
+    @inline(__always)
+    public static func !^^ <MapTarget>(
+        _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
+        return lhs.nonbacktracking().map { _ in rhs }
+    }
+
+    @inline(__always)
     public static func !^^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().mapParse(rhs)
     }
 
     /// Same as `.optional()`
+    @inline(__always)
     public static postfix func .? (_ parser: Parser<Target>) -> Parser<Target?> {
         return parser.optional()
     }
 
     /// Same as `.many()`
+    @inline(__always)
     public static postfix func .+ (parser: Parser<Target>) -> Parser<[Target]> {
         return parser.many()
     }
 
     /// Same as `.manyOrNone()`
+    @inline(__always)
     public static postfix func .* (parser: Parser<Target>) -> Parser<[Target]> {
         return parser.manyOrNone()
     }
@@ -425,4 +470,3 @@ public extension Parser where Target : Sequence, Target.Iterator.Element : Assoc
     }
 
 }
-

@@ -263,11 +263,9 @@ public struct Parser<Target> {
     }
 
     private func parse(_ input: Input) throws -> Target {
-        do {
-            let output = try run(input)
-            guard output.rest.isEmpty else { throw ParseFailure(extraInputAt: output.rest) }
-            return output.target
-        }
+        let output = try run(input)
+        guard output.rest.isEmpty else { throw ParseFailure(extraInputAt: output.rest) }
+        return output.target
     }
 
     @available(*, deprecated, message: "Use | operator instead")
