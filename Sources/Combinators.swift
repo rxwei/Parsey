@@ -109,7 +109,7 @@ public extension Parser {
             }
         }
     }
-    
+
     /// Skipped zero or more times without output
     /// - returns: the composed parser without output
     public func skippedManyOrNone() -> Parser<()> {
@@ -142,7 +142,7 @@ public extension Parser {
     /// Skipped one or more times without output
     /// - returns: the composed parser without output
     public func skippedMany() -> Parser<()> {
-        return self ~~> skippedManyOrNone()
+        return self ~~> self.skippedManyOrNone()
     }
 
     /// With alternative parse result on failure
@@ -176,9 +176,9 @@ public extension Parser {
     /// - parameter left: parser of the right side
     /// - returns: the composed parser
     public func between<Left, Right>(_ left: Parser<Left>,
-                                     _ right: Parser<Right>) -> Parser<Target> {
+                        _ right: @autoclosure @escaping () -> Parser<Right>) -> Parser<Target> {
         return left.flatMap { _ in
-            self.flatMap { out in right.map { _ in out } }
+            self.flatMap { out in right().map { _ in out } }
         }
     }
 
@@ -194,9 +194,9 @@ public extension Parser {
     /// Accept input one or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
-    public func many<T>(separatedBy separator: Parser<T>) -> Parser<[Target]> {
+    public func many<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
         return flatMap { out in
-            separator.skipped(to: self).manyOrNone().map { outs in
+            separator().skipped(to: self).manyOrNone().map { outs in
                 [out] + outs
             }
         }
@@ -216,7 +216,7 @@ public extension Parser {
     /// Accept input zero or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
-    public func manyOrNone<T>(separatedBy separator: Parser<T>) -> Parser<[Target]> {
+    public func manyOrNone<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
         return many(separatedBy: separator) | Parser<[Target]>(success: [])
     }
 
@@ -234,9 +234,9 @@ public extension Parser {
     /// Use this to construct parsers for dot-expressions like `expr.f().g().z()`
     /// - parameter suffix: suffix parser that produces a 1-place function
     /// - returns: the composed parser
-    public func suffixed(by suffix: Parser<(Target) -> Target>) -> Parser<Target> {
+    public func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target) -> Target>) -> Parser<Target> {
         func rest(_ x: Target) -> Parser<Target> {
-            return suffix.flatMap { f in rest(f(x)) } | .return(x)
+            return suffix().flatMap { f in rest(f(x)) } | .return(x)
         }
         return flatMap(rest)
     }
@@ -244,12 +244,12 @@ public extension Parser {
     /// Left-associative infix operation parser
     /// Use this to avoid left-recursion!
     /// `a.infixedRight(by: op)` produces a left-associative parse tree
-    ///     (<op> (<op> (<op> (<a> <op> <a>) <a>) <a>) <a>) 
+    ///     (<op> (<op> (<op> (<a> <op> <a>) <a>) <a>) <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedLeft(by op: Parser<(Target, Target) -> Target>) -> Parser<Target> {
+    public func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
         func rest(_ x: Target) -> Parser<Target> {
-            return op.flatMap { f in self.flatMap { y in rest(f(x, y)) } } | .return(x)
+            return op().flatMap { f in self.flatMap { y in rest(f(x, y)) } } | .return(x)
         }
         return flatMap(rest)
     }
@@ -259,12 +259,12 @@ public extension Parser {
     ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedRight(by op: Parser<(Target, Target) -> Target>) -> Parser<Target> {
+    public func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
         func scan() -> Parser<Target> {
             return flatMap(rest)
         }
         func rest(_ x: Target) -> Parser<Target> {
-            return op.flatMap { f in scan().map { y in f(x, y) } } | .return(x)
+            return op().flatMap { f in scan().map { y in f(x, y) } } | .return(x)
         }
         return scan()
     }
@@ -273,8 +273,8 @@ public extension Parser {
     /// Equivalent to `<~~` operator
     /// - parameter terminator: the parser of the rest input
     /// - returns: the composed parser
-    public func ended<T>(by terminator: Parser<T>) -> Parser<Target> {
-        return flatMap { res in terminator.map { _ in res } }
+    public func ended<T>(by terminator: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
+        return flatMap { res in terminator().map { _ in res } }
     }
 
     /// Parse the right side on success, producing a tuple of results from
@@ -282,8 +282,8 @@ public extension Parser {
     /// Equivalent to `~~` operator.
     /// - parameter terminator: the parser of the rest input
     /// - returns: the composed parser
-    public func followed<T>(by follower: Parser<T>) -> Parser<(Target, T)> {
-        return flatMap { out1 in follower.map { out2 in (out1, out2) } }
+    public func followed<T>(by follower: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
+        return flatMap { out1 in follower().map { out2 in (out1, out2) } }
     }
 
     /// Parse the right side on success, producing only the result from the right.
@@ -291,8 +291,8 @@ public extension Parser {
     /// - parameter follower: the parser of the rest input
     /// - returns: the composed parser
     @inline(__always)
-    public func skipped<T>(to follower: Parser<T>) -> Parser<T> {
-        return flatMap { _ in follower }
+    public func skipped<T>(to follower: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
+        return flatMap { _ in follower() }
     }
 
     /// Drop the result
@@ -313,12 +313,12 @@ public extension Parser {
     /// Same as `.skipped(to:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
+    public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
         return lhs.skipped(to: rhs)
     }
 
     @inline(__always)
-    public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<T> {
+    public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
         return lhs.nonbacktracking().skipped(to: rhs)
     }
 
@@ -326,12 +326,12 @@ public extension Parser {
     /// Same as `.ended(by:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
+    public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
     @inline(__always)
-    public static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<Target> {
+    public static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
         return lhs.nonbacktracking().ended(by: rhs)
     }
 
@@ -340,19 +340,19 @@ public extension Parser {
     /// Same as `.followed(by:)`
     /// - returns: the composed parser
     @inline(__always)
-    static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
+    static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
         return lhs.followed(by: rhs)
     }
-    
+
+    /// Parse the right side on success without backtracking, producing a
+    /// tuple of results from the left and the right.
+    /// Same as `.followed(by:)`
+    /// - returns: the composed parser
     @inline(__always)
-    static public func !~~ <T>(_ lhs: Parser<Target>, _ rhs: Parser<T>) -> Parser<(Target, T)> {
+    static public func !~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
         return lhs.nonbacktracking().followed(by: rhs)
     }
 
-    /// Parse the right side on success, producing a tuple of results from
-    /// the left and the right.
-    /// Same as `.followed(by:)`
-    /// - returns: the composed parser
     @inline(__always)
     public static func ** <MapTarget>(
         _ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
@@ -442,8 +442,8 @@ public extension Parser where Target : Associative {
     /// Concatenate the result with the other parser's
     /// - parameter next: parser of the right side
     /// - returns: the composed parser that produces concatenated result
-    public func concatenatingResult(with next: Parser<Target>) -> Parser<Target> {
-        return flatMap { out1 in next.map { out2 in out1 + out2 } }
+    public func concatenatingResult(with next: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
+        return flatMap { out1 in next().map { out2 in out1 + out2 } }
     }
 
     /// Concatenate results one or more times
@@ -463,7 +463,7 @@ public extension Parser where Target : Associative {
     /// Concatenate results zero or more times
     /// Same as `.concatenatingResult(with:)`
     /// - returns: the composed parser that produces concatenated result
-    public static func +(lhs: Parser<Target>, rhs: Parser<Target>) -> Parser<Target> {
+    public static func +(lhs: Parser<Target>, rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return lhs.concatenatingResult(with: rhs)
     }
 
@@ -484,9 +484,9 @@ public extension Parser where Target : Associative {
 }
 
 public extension Parser where Target : Sequence, Target.Iterator.Element : Associative {
-
+    
     public func concatenated() -> Parser<Target.Iterator.Element> {
         return map { $0.reduced() }
     }
-
+    
 }
