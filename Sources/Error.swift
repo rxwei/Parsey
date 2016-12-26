@@ -16,6 +16,7 @@ protocol ParseError : Error, CustomStringConvertible {
 public struct ParseFailure : ParseError {
     public var expected: String
     public var input: ParserInput
+    internal var tagged: Bool = false
     internal var irrecoverable: Bool = false
 
     public init(expected: String, input: ParserInput) {
@@ -26,6 +27,11 @@ public struct ParseFailure : ParseError {
     public init(extraInputAt input: ParserInput) {
         self.expected = "end of input"
         self.input = input
+    }
+
+    internal mutating func tag(_ tag: String) {
+        expected = tag
+        tagged = true
     }
 }
 

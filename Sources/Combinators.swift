@@ -65,8 +65,8 @@ public extension Parser {
             do {
                 return try self.run(input)
             }
-            catch var failure as ParseFailure {
-                failure.expected = tag
+            catch var failure as ParseFailure where !failure.tagged {
+                failure.tag(tag)
                 throw failure
             }
         }
