@@ -24,7 +24,7 @@ public struct ParseFailure : ParseError {
         self.input = input
     }
 
-    public init(extraInputAt input: ParserInput) {
+    public init(extraInput input: ParserInput) {
         self.expected = "end of input"
         self.input = input
     }

@@ -74,7 +74,8 @@ public enum Lexer {
             guard let first = input.first, !exceptions.contains(first) else {
                 throw ParseFailure(
                     expected: "any character except {\(exceptions.map{"\"\($0)\""}.joined(separator: ", "))}",
-                    input: input)
+                    input: input
+                )
             }
             return Parse(input: input, target: String(first), length: 1)
         }
@@ -103,6 +104,13 @@ public extension Lexer {
     public static let unsignedDecimal = unsignedInteger + character(".") + unsignedInteger
     public static let signedInteger   = anyCharacter(in: "+-").maybeEmpty() + unsignedInteger
     public static let signedDecimal   = anyCharacter(in: "+-").maybeEmpty() + unsignedDecimal
+
+    public static let end = Parser<String> { input in
+        guard input.isEmpty else {
+            throw ParseFailure(extraInput: input)
+        }
+        return Parse(target: "", range: input.location..<input.location, rest: input)
+    }
 
 }
 

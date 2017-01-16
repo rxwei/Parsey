@@ -264,7 +264,7 @@ public struct Parser<Target> {
 
     private func parse(_ input: Input) throws -> Target {
         let output = try run(input)
-        guard output.rest.isEmpty else { throw ParseFailure(extraInputAt: output.rest) }
+        guard output.rest.isEmpty else { throw ParseFailure(extraInput: output.rest) }
         return output.target
     }
 
