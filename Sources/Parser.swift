@@ -336,6 +336,31 @@ extension Parser : FlatMappable {
         }
     }
 
+    public func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out = try self.run(input)
+            return Parse(target: transform(out.target, out.range), range: out.range, rest: out.rest)
+        }
+    }
+
+    public func applyRange<MapTarget>(_ transform: Parser<(Target, SourceRange) -> MapTarget>) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out1 = try transform.run(input)
+            let out2 = try self.run(out1.rest)
+            return Parse(target: out1.target(out2.target, out2.range),
+                         range: out2.range,
+                         rest: out2.rest)
+        }
+    }
+
+    public func flatMapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> Parser<MapTarget>) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out = try self.run(input)
+            let out2 = try transform(out.target, out.range).run(out.rest)
+            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
+        }
+    }
+
     /// Transform the parse to another
     /// The parse (not parser!) contains source range information
     public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {

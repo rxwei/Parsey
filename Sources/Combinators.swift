@@ -8,22 +8,24 @@
 
 import Funky
 
-infix operator ~~>  : FunctionCompositionPrecedence /// .skipped(to:)
-infix operator !~~> : FunctionCompositionPrecedence /// .nonbacktracking().skipped(to:)
-infix operator <~~  : FunctionCompositionPrecedence /// .ended(by:)
-infix operator !<~~ : FunctionCompositionPrecedence /// .nonbacktracking().ended(by:)
-infix operator ~~   : FunctionCompositionPrecedence /// Left and right forming a tuple
-infix operator !~~  : FunctionCompositionPrecedence /// Non-backtracking ~~
-infix operator **   : FunctionCompositionPrecedence /// Apply lhs's result function to rhs's result
-infix operator !**  : FunctionCompositionPrecedence /// Non-backtracking !**
-infix operator ^^=  : FunctionCompositionPrecedence /// .map { _ in ... }
-infix operator ^^   : FunctionCompositionPrecedence /// .map(_:)
-infix operator ^^^  : FunctionCompositionPrecedence /// .mapParse(_:)
-infix operator !^^  : FunctionCompositionPrecedence /// .nonbacktracking().map(_:)
-infix operator !^^=  : FunctionCompositionPrecedence /// .nonbacktracking().map { _ in ... }
-infix operator !^^^ : FunctionCompositionPrecedence /// .nonbacktracking().mapParse(_:)
-infix operator <!-- : FunctionCompositionPrecedence /// .tagged(_:)
-infix operator ..   : FunctionCompositionPrecedence /// .tagged(_:)
+infix operator ~~>  : FunctionCompositionPrecedence   /// .skipped(to:)
+infix operator !~~> : FunctionCompositionPrecedence   /// .nonbacktracking().skipped(to:)
+infix operator <~~  : FunctionCompositionPrecedence   /// .ended(by:)
+infix operator !<~~ : FunctionCompositionPrecedence   /// .nonbacktracking().ended(by:)
+infix operator ~~   : FunctionCompositionPrecedence   /// Left and right forming a tuple
+infix operator !~~  : FunctionCompositionPrecedence   /// Non-backtracking ~~
+infix operator **   : FunctionCompositionPrecedence   /// Apply lhs's result function to rhs's result
+infix operator !**  : FunctionCompositionPrecedence   /// Non-backtracking !**
+infix operator ^^=  : FunctionCompositionPrecedence   /// .map { _ in ... }
+infix operator ^^   : FunctionCompositionPrecedence   /// .map(_:)
+infix operator ^^^  : FunctionCompositionPrecedence   /// .mapRange(_:) 
+infix operator ^^&  : FunctionCompositionPrecedence   /// .mapParse(_:)
+infix operator !^^  : FunctionCompositionPrecedence   /// .nonbacktracking().map(_:)
+infix operator !^^=  : FunctionCompositionPrecedence  /// .nonbacktracking().map { _ in ... }
+infix operator !^^^ : FunctionCompositionPrecedence   /// .nonbacktracking().mapRange(_:)
+infix operator !^^& : FunctionCompositionPrecedence   /// .nonbacktracking().mapParse(_:)
+infix operator <!-- : FunctionCompositionPrecedence   /// .tagged(_:)
+infix operator ..   : FunctionCompositionPrecedence   /// .tagged(_:)
 
 postfix operator .! /// Non-backtracking
 postfix operator .? /// Optional
@@ -31,6 +33,7 @@ postfix operator .+ /// One or more
 postfix operator .* /// Zero or more
 postfix operator +  /// One or more concatenated
 postfix operator *  /// Zero or more concatenated
+postfix operator .^
 
 public extension Parser {
 
@@ -56,7 +59,7 @@ public extension Parser {
     }
 
     /// Tag with description for clear error messages
-    /// Equivalent to `<!--` operator
+    /// Equivalent to `..` operator
     /// - parameter tag: tag string
     /// - returns: the tagged parser
     @inline(__always)
@@ -383,10 +386,31 @@ public extension Parser {
     }
 
     /// Transform the parse to the desired data structure
-    /// Same as `.mapParse(_:)`
+    /// Same as `.mapRange(_:)`
     /// - returns: the composed parser
     @inline(__always)
     public static func ^^^ <MapTarget>(
+        _ lhs: Parser<Target>, _ rhs: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
+        return lhs.mapRange(rhs)
+    }
+
+    @inline(__always)
+    public static func ** <MapTarget>(
+        _ lhs: Parser<(Target, SourceRange) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
+        return rhs.applyRange(lhs)
+    }
+
+    @inline(__always)
+    public static func ** <MapTarget>(
+        _ lhs: Parser<(Target) -> (SourceRange) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
+        return rhs.applyRange(lhs.map(uncurry))
+    }
+
+    /// Transform the parse to the desired data structure
+    /// Same as `.mapParse(_:)`
+    /// - returns: the composed parser
+    @inline(__always)
+    public static func ^^& <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.mapParse(rhs)
     }
@@ -405,6 +429,12 @@ public extension Parser {
 
     @inline(__always)
     public static func !^^^ <MapTarget>(
+        _ lhs: Parser<Target>, _ rhs: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
+        return lhs.nonbacktracking().mapRange(rhs)
+    }
+
+    @inline(__always)
+    public static func !^^& <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().mapParse(rhs)
     }
@@ -425,6 +455,11 @@ public extension Parser {
     @inline(__always)
     public static postfix func .* (parser: Parser<Target>) -> Parser<[Target]> {
         return parser.manyOrNone()
+    }
+
+    @inline(__always)
+    public static postfix func .^ (parser: Parser<(SourceRange) -> Target>) -> Parser<Target> {
+        return parser.mapRange { target, range in target(range) }
     }
 
 }
