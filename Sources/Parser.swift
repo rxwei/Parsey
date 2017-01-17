@@ -16,7 +16,7 @@ public struct ParserInput {
 
     public let lineStream: String.CharacterView
     public let stream: String.CharacterView
-    
+
     public let location: SourceLocation
 
     public var line: String {
@@ -74,19 +74,19 @@ public struct ParserInput {
 
 /// To be removed when `Sequence.prefix(while:)` is implemented in the standard library
 extension Sequence where SubSequence : Sequence,
-                         SubSequence.Iterator.Element == Iterator.Element,
-                         SubSequence.SubSequence == SubSequence {
+    SubSequence.Iterator.Element == Iterator.Element,
+SubSequence.SubSequence == SubSequence {
     public func prefix(while predicate: (Iterator.Element) throws -> Bool)
         rethrows -> AnySequence<Iterator.Element> {
-        var result: [Iterator.Element] = []
-        
-        for element in self {
-            guard try predicate(element) else {
-                break
+            var result: [Iterator.Element] = []
+
+            for element in self {
+                guard try predicate(element) else {
+                    break
+                }
+                result.append(element)
             }
-            result.append(element)
-        }
-        return AnySequence(result)
+            return AnySequence(result)
     }
 }
 
@@ -205,7 +205,7 @@ extension ParserInput : CustomStringConvertible {
 
 }
 
-/// Parse - noun. the result obtained by parsing a string or a text 
+/// Parse - noun. the result obtained by parsing a string or a text
 /// Origin: mid 16th cent.: perhaps from Middle English pars ‘parts of speech,’
 ///         from Old French pars ‘parts’ (influenced by Latin pars ‘part’).
 public struct Parse<Target> {
@@ -215,7 +215,7 @@ public struct Parse<Target> {
     ///     "1" gets parsed to .integer(1)
     ///     "(+ 1 2)" gets parsed to .sExpression(.symbol(+), .integer(1), .integer(2))
     public var target: Target
-    
+
     /// Source range from the beginning of this parse to the end
     /// For example, with an s-expression parser:
     ///     The parse of "1" has range 1:1..<1:2
@@ -315,7 +315,8 @@ extension Parser : FlatMappable {
     public func map<MapTarget>(_ transform: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            return Parse(target: transform(out.target), range: out.range, rest: out.rest)
+            let newRange = input.location..<out.range.upperBound
+            return Parse(target: transform(out.target), range: newRange, rest: out.rest)
         }
     }
 
@@ -324,7 +325,8 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            return Parse(target: out1.target(out2.target), range: out2.range, rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out1.target(out2.target), range: newRange, rest: out2.rest)
         }
     }
 
@@ -332,14 +334,16 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target).run(out.rest)
-            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
 
     public func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            return Parse(target: transform(out.target, out.range), range: out.range, rest: out.rest)
+            let newRange = input.location..<out.range.upperBound
+            return Parse(target: transform(out.target, newRange), range: newRange, rest: out.rest)
         }
     }
 
@@ -347,9 +351,8 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            return Parse(target: out1.target(out2.target, out2.range),
-                         range: out2.range,
-                         rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out1.target(out2.target, newRange), range: newRange, rest: out2.rest)
         }
     }
 
@@ -357,7 +360,8 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target, out.range).run(out.rest)
-            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
 
@@ -366,7 +370,8 @@ extension Parser : FlatMappable {
     public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            return Parse(target: transform(out), range: out.range, rest: out.rest)
+            let newRange = input.location..<out.range.upperBound
+            return Parse(target: transform(out), range: newRange, rest: out.rest)
         }
     }
 
@@ -376,7 +381,8 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            return Parse(target: out1.target(out2), range: out2.range, rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out1.target(out2), range: newRange, rest: out2.rest)
         }
     }
 
@@ -384,8 +390,9 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out).run(out.rest)
-            return Parse(target: out2.target, range: input.location..<out2.range.upperBound, rest: out2.rest)
+            let newRange = input.location..<out2.range.upperBound
+            return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
-
+    
 }
