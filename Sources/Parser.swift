@@ -315,7 +315,7 @@ extension Parser : FlatMappable {
     public func map<MapTarget>(_ transform: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            let newRange = input.location..<out.range.upperBound
+            let newRange = input.location..<out.rest.location
             return Parse(target: transform(out.target), range: newRange, rest: out.rest)
         }
     }
@@ -325,7 +325,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out1.target(out2.target), range: newRange, rest: out2.rest)
         }
     }
@@ -334,7 +334,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target).run(out.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
@@ -342,7 +342,7 @@ extension Parser : FlatMappable {
     public func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            let newRange = input.location..<out.range.upperBound
+            let newRange = input.location..<out.rest.location
             return Parse(target: transform(out.target, newRange), range: newRange, rest: out.rest)
         }
     }
@@ -351,7 +351,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out1.target(out2.target, newRange), range: newRange, rest: out2.rest)
         }
     }
@@ -360,7 +360,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target, out.range).run(out.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
@@ -370,7 +370,7 @@ extension Parser : FlatMappable {
     public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
-            let newRange = input.location..<out.range.upperBound
+            let newRange = input.location..<out.rest.location
             return Parse(target: transform(out), range: newRange, rest: out.rest)
         }
     }
@@ -381,7 +381,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out1.target(out2), range: newRange, rest: out2.rest)
         }
     }
@@ -390,7 +390,7 @@ extension Parser : FlatMappable {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out).run(out.rest)
-            let newRange = input.location..<out2.range.upperBound
+            let newRange = input.location..<out2.rest.location
             return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
