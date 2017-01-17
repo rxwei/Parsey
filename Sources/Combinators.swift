@@ -518,6 +518,21 @@ public extension Parser where Target : Associative {
 
 }
 
+public extension Parser where Target : Hashable {
+
+    public func map<MapTarget>(_ mappings: [Target : MapTarget]) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let parse = try self.run(input)
+            guard let target = mappings[parse.target] else {
+                throw ParseFailure(expected: String(describing: mappings.keys),
+                                   input: input)
+            }
+            return Parse(target: target, range: parse.range, rest: parse.rest)
+        }
+    }
+    
+}
+
 public extension Parser where Target : Sequence, Target.Iterator.Element : Associative {
     
     public func concatenated() -> Parser<Target.Iterator.Element> {

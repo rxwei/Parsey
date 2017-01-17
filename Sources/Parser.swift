@@ -9,7 +9,7 @@
 import Funky
 
 /// Range from a source location to another, for range tracking
-public typealias SourceRange = Range<SourceLocation>
+public typealias SourceRange = CountableRange<SourceLocation>
 
 /// Input with location tracking
 public struct ParserInput {

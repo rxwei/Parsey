@@ -7,7 +7,7 @@
 //
 
 /// Two dimentional text location with line number, column number and linear index
-public protocol TextLocation : Comparable {
+public protocol TextLocation : Comparable, Strideable {
     var line: Int { set get }
     var column: Int { set get }
     var index: Int { set get }
@@ -62,12 +62,24 @@ public extension TextLocation {
     public func newLine() -> Self {
         return Self(line: line + 1, column: Self.initialPosition, index: index + 1)
     }
+    
+    /// Returns a stride `x` such that `self.advanced(by: x)` approximates
+    /// `other`.
+    ///
+    /// If `Stride` conforms to `Integer`, then `self.advanced(by: x) == other`.
+    ///
+    /// - Complexity: O(1).
+    public func distance(to other: SourceLocation) -> Int {
+        return other.index - index
+    }
 
 }
 
 /// Text location for source code
 /// Initial position starts from 1
 public struct SourceLocation : TextLocation {
+
+    public typealias Stride = Int
 
     public static let initialPosition = 1
 

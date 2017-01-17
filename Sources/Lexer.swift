@@ -155,6 +155,14 @@ public extension Lexer {
         }
     }
 
+    /// Match any token in the collection
+    /// - Note: Since this is based on regular expression matching, you should be careful
+    /// with special regex characters
+    public static func token<C: Collection>(in tokens: C) -> Parser<String>
+        where C.Iterator.Element == String {
+        return regex(tokens.joined(separator: "|"))
+    }
+
     /// Parse an explicit token
     public static func token(_ token: String) -> Parser<String> {
         return Parser<String> { input in
