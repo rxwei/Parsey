@@ -135,7 +135,7 @@ public extension Lexer {
     /// Match regular expression
     public static func regex(_ pattern: String) -> Parser<String> {
         return Parser<String> { input in
-            #if !os(macOS) /// Swift standard library inconsistency!
+            #if !os(macOS) && !swift(>=3.1) /// Swift standard library inconsistency!
             let regex = try RegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
             #else
             let regex = try NSRegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
