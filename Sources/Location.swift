@@ -62,6 +62,17 @@ public extension TextLocation {
     public func newLine() -> Self {
         return Self(line: line + 1, column: Self.initialPosition, index: index + 1)
     }
+
+    public mutating func advance(by n: Int) {
+        column += n
+        index += n
+    }
+
+    public mutating func advanceToNewLine() {
+        line += 1
+        column = Self.initialPosition
+        index += 1
+    }
     
     /// Returns a stride `x` such that `self.advanced(by: x)` approximates
     /// `other`.

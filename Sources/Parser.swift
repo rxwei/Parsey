@@ -14,10 +14,9 @@ public typealias SourceRange = CountableRange<SourceLocation>
 /// Input with location tracking
 public struct ParserInput {
 
-    public let lineStream: String.CharacterView
-    public let stream: String.CharacterView
-
-    public let location: SourceLocation
+    public var lineStream: String.CharacterView
+    public var stream: String.CharacterView
+    public var location: SourceLocation
 
     public var line: String {
         return String(lineStream.prefix(while: !="\n"))
@@ -56,7 +55,7 @@ public struct ParserInput {
     }
 
     internal init(stream: String.CharacterView, lineStream: String.CharacterView,
-                  at location: SourceLocation = SourceLocation()) {
+                  location: SourceLocation = SourceLocation()) {
         self.lineStream = lineStream
         self.stream = stream
         self.location = location
@@ -70,25 +69,22 @@ public struct ParserInput {
 
 }
 
-/// FIXME: Implement indexing for line stream
-
-/// To be removed when `Sequence.prefix(while:)` is implemented in the standard library
+/// `prefix(while:)` is not available in Swift 3.0.x
+#if !swift(>=3.1)
 extension Sequence where SubSequence : Sequence,
-    SubSequence.Iterator.Element == Iterator.Element,
-SubSequence.SubSequence == SubSequence {
+                         SubSequence.Iterator.Element == Iterator.Element,
+                         SubSequence.SubSequence == SubSequence {
     public func prefix(while predicate: (Iterator.Element) throws -> Bool)
         rethrows -> AnySequence<Iterator.Element> {
-            var result: [Iterator.Element] = []
-
-            for element in self {
-                guard try predicate(element) else {
-                    break
-                }
-                result.append(element)
-            }
-            return AnySequence(result)
+        var result: [Iterator.Element] = []
+        for element in self {
+            guard try predicate(element) else { break }
+            result.append(element)
+        }
+        return AnySequence(result)
     }
 }
+#endif
 
 extension ParserInput : Sequence {
 
@@ -96,7 +92,7 @@ extension ParserInput : Sequence {
         return ParserInput(
             stream: stream.prefix(maxLength),
             lineStream: lineStream,
-            at: location
+            location: location
         )
     }
 
@@ -112,24 +108,43 @@ extension ParserInput : Sequence {
         return stream.makeIterator()
     }
 
+    public func prefix(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
+        var newLoc = location
+        var newStream = String.CharacterView()
+        for char in stream {
+            guard try predicate(char) else { break }
+            newStream.append(char)
+            if char == "\n" {
+                newLoc.advanceToNewLine()
+            } else {
+                newLoc.advance(by: 1)
+            }
+        }
+        return ParserInput(
+            stream: newStream,
+            lineStream: newStream,
+            location: newLoc
+        )
+    }
+
     public func drop(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
         var newLoc = location
         var newStream = stream
         var newLineStream = lineStream
         for char in stream {
             guard try predicate(char) else { break }
-            newStream = newStream.dropFirst()
+            newStream.removeFirst()
             if char == "\n" {
                 newLineStream = newStream
-                newLoc = newLoc.newLine()
+                newLoc.advanceToNewLine()
             } else {
-                newLoc = newLoc.advanced(by: 1)
+                newLoc.advance(by: 1)
             }
         }
         return ParserInput(
             stream: newStream,
             lineStream: newLineStream,
-            at: newLoc
+            location: newLoc
         )
     }
 
@@ -140,13 +155,13 @@ extension ParserInput : Sequence {
             return ParserInput(
                 stream: newStream,
                 lineStream: newStream,
-                at: location.newLine()
+                location: location.newLine()
             )
         }
         return ParserInput(
             stream: stream.dropFirst(),
             lineStream: lineStream,
-            at: location.advanced(by: 1)
+            location: location.advanced(by: 1)
         )
     }
 
@@ -157,27 +172,27 @@ extension ParserInput : Sequence {
         for _ in 0..<n {
             guard !newStream.isEmpty else { break }
             let char = newStream.first
-            newStream = newStream.dropFirst()
+            newStream.removeFirst()
             if char == "\n" {
                 newLineStream = newStream
-                newLoc = newLoc.newLine()
+                newLoc.advanceToNewLine()
             } else {
-                newLoc = newLoc.advanced(by: 1)
+                newLoc.advance(by: 1)
             }
         }
         return ParserInput(
             stream: newStream,
             lineStream: newLineStream,
-            at: newLoc
+            location: newLoc
         )
     }
 
     public func dropLast() -> ParserInput {
-        return ParserInput(stream: stream, lineStream: stream.dropLast(), at: location)
+        return ParserInput(stream: stream, lineStream: stream.dropLast(), location: location)
     }
 
     public func dropLast(_ n: Int) -> ParserInput {
-        return ParserInput(stream: stream, lineStream: stream.dropLast(n), at: location)
+        return ParserInput(stream: stream, lineStream: stream.dropLast(n), location: location)
     }
 
     /// TODO: Need location tracking!
