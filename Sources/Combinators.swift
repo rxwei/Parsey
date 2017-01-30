@@ -244,6 +244,23 @@ public extension Parser {
         return flatMap(rest)
     }
 
+    /// Suffix operation parser
+    /// Use this to avoid left-recursion!
+    /// `a.suffixed(by: <s>)` produces a left-associative parse tree
+    ///     (<s> (<s> (<s> (<s> a))))
+    /// Use this to construct parsers for dot-expressions like `expr.f().g().z()`
+    /// - parameter suffix: suffix parser that produces a 1-place function
+    /// - returns: the composed parser
+    public func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target, SourceRange) -> Target>) -> Parser<Target> {
+        func rest(_ x: Target, _ lhsRange: SourceRange) -> Parser<Target> {
+            return suffix().flatMapRange { f, rhsRange in
+                let range = lhsRange.lowerBound..<rhsRange.upperBound
+                return rest(f(x, range), range)
+            } | .return(x)
+        }
+        return flatMapRange(rest)
+    }
+
     /// Left-associative infix operation parser
     /// Use this to avoid left-recursion!
     /// `a.infixedRight(by: op)` produces a left-associative parse tree
@@ -257,6 +274,24 @@ public extension Parser {
         return flatMap(rest)
     }
 
+    /// Left-associative infix operation parser
+    /// Use this to avoid left-recursion!
+    /// `a.infixedRight(by: op)` produces a left-associative parse tree
+    ///     (<op> (<op> (<op> (<a> <op> <a>) <a>) <a>) <a>)
+    /// - parameter op: infix operator parser that produces a 2-place function
+    /// - returns: the composed parser
+    public func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
+        func rest(_ x: Target, _ lhsRange: SourceRange) -> Parser<Target> {
+            return op().flatMap { f in
+                self.flatMapRange { y, rhsRange in
+                    let range = lhsRange.lowerBound..<rhsRange.upperBound
+                    return rest(f(x, y, range), range)
+                }
+            } | .return(x)
+        }
+        return flatMapRange(rest)
+    }
+
     /// Right-associative infix operation parser
     /// `a.infixedRight(by: op)` produces a right-associative parse tree
     ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
@@ -268,6 +303,26 @@ public extension Parser {
         }
         func rest(_ x: Target) -> Parser<Target> {
             return op().flatMap { f in scan().map { y in f(x, y) } } | .return(x)
+        }
+        return scan()
+    }
+
+    /// Right-associative infix operation parser
+    /// `a.infixedRight(by: op)` produces a right-associative parse tree
+    ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
+    /// - parameter op: infix operator parser that produces a 2-place function
+    /// - returns: the composed parser
+    public func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
+        func scan() -> Parser<Target> {
+            return flatMapRange(rest)
+        }
+        func rest(_ x: Target, _ lhsRange: SourceRange) -> Parser<Target> {
+            return op().flatMap { f in
+                scan().mapRange { y, rhsRange in
+                    let range = lhsRange.lowerBound..<rhsRange.upperBound
+                    return f(x, y, range)
+                }
+            } | .return(x)
         }
         return scan()
     }

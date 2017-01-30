@@ -52,31 +52,31 @@ class ParseyTests: XCTestCase {
 
     func testLeftAssociativeOperator() throws {
         indirect enum Expression : CustomStringConvertible {
-            case integer(Int)
-            case symbol(String)
-            case infix(String, Expression, Expression)
+            case integer(Int, SourceRange)
+            case symbol(String, SourceRange)
+            case infix(String, Expression, Expression, SourceRange)
 
             var description: String {
                 switch self {
-                case let .integer(i): return i.description
-                case let .symbol(s): return s
-                case let .infix(o, l, r): return "(\(o) \(l) \(r))"
+                case let .integer(i, sr): return "\(i):\(sr)"
+                case let .symbol(s, sr): return "\(s):\(sr)"
+                case let .infix(o, l, r, sr): return "(\(o) \(l) \(r)):\(sr)"
                 }
             }
         }
 
         enum Grammar {
             static let integer = Lexer.signedInteger
-                ^^ {Int($0)!} ^^ Expression.integer
+                ^^ {Int($0)!} ^^^ Expression.integer
 
             static let symbol = Lexer.regex("[a-zA-Z][0-9a-zA-Z]*")
-                ^^ Expression.symbol
+                ^^^ Expression.symbol
 
             static let addOp = Lexer.anyCharacter(in: "+-")
-                ^^ { op in { lhs, rhs in Expression.infix(op, lhs, rhs) } }
+                ^^ { op in { lhs, rhs, sr in Expression.infix(op, lhs, rhs, sr) } }
             
             static let multOp = Lexer.anyCharacter(in: "*/")
-                ^^ { op in { lhs, rhs in Expression.infix(op, lhs, rhs) } }
+                ^^ { op in { lhs, rhs, sr in Expression.infix(op, lhs, rhs, sr) } }
 
             /// Left-associative multiplication
             static let multiplication = (integer | symbol).infixedLeft(by: multOp)
