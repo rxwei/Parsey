@@ -37,8 +37,16 @@ public struct ParseFailure : ParseError {
 
 extension ParseFailure : CustomStringConvertible {
     public var description: String {
-        let first = input.first
-        return "Parse failure at \(input)\nExpecting \(expected), but found \"\(first?.description ?? "")\""
+        var prefix = input.restLine
+        if prefix.characters.count > 10 {
+            prefix = String(prefix.characters.prefix(10)) + " ..."
+        }
+        var desc = "Parse failure at \(input)\n"
+        desc += "Expecting \(expected)"
+        if !prefix.isEmpty {
+            desc += ", but I found \"\(prefix)\""
+        }
+        return desc
     }
 
     public var localizedDescription: String {

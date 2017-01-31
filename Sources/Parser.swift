@@ -22,6 +22,10 @@ public struct ParserInput {
         return String(lineStream.prefix(while: !="\n"))
     }
 
+    public var restLine: String {
+        return String(stream.prefix(while: !="\n"))
+    }
+
     public var restLineLength: Int {
         return String.CharacterView(stream.prefix(while: !="\n")).count
     }
