@@ -62,7 +62,6 @@ public extension Parser {
     /// Equivalent to `..` operator
     /// - parameter tag: tag string
     /// - returns: the tagged parser
-    @inline(__always)
     public func tagged(_ tag: String) -> Parser<Target> {
         return Parser { input in
             do {
@@ -189,9 +188,10 @@ public extension Parser {
     /// Equivalent to `.between(surrounding, surrounding)`
     /// - parameter surrounding: parser of the surrounding
     /// - returns: the composed parser
-    @inline(__always)
     public func amid<T>(_ surrounding: Parser<T>) -> Parser<Target> {
-        return between(surrounding, surrounding)
+        return surrounding.flatMap { _ in
+            self.flatMap { out in surrounding.map { _ in out } }
+        }
     }
 
     /// Accept input one or more times, separated by some separator
@@ -362,7 +362,6 @@ public extension Parser {
 
     /// Make optional
     /// - returns: the composed parser that accepts the original input or nothing
-    @inline(__always)
     public func optional() -> Parser<Target?> {
         return map{$0} | .return(nil)
     }
