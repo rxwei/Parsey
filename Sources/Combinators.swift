@@ -74,6 +74,16 @@ public extension Parser {
         }
     }
 
+    public func satisfying(_ predicate: @escaping (Target) -> Bool) -> Parser<Target> {
+        return Parser { input in
+            let out = try self.run(input)
+            guard predicate(out.target) else {
+                throw ParseFailure(input: input)
+            }
+            return out
+        }
+    }
+
     /// Tag with description for clear error messages
     /// Equivalent to `.tagged(_:)`
     /// - returns: the tagged parser

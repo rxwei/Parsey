@@ -5,10 +5,10 @@ class ParseyTests: XCTestCase {
 
     func testIntegers() {
         do {
-            try XCTAssertEqual(Lexer.unsignedInteger.map{Int($0)!}.parse("12345"), 12345)
-            try XCTAssertEqual(Lexer.signedInteger.map{Int($0)!}.parse("12345"), 12345)
-            try XCTAssertEqual(Lexer.signedInteger.map{Int($0)!}.parse("-12345"), -12345)
-            try XCTAssertEqual(Lexer.signedInteger.map{Int($0)!}.parse("+12345"), 12345)
+            try XCTAssertEqual(Lexer.unsignedInteger.flatMap{Int($0)}.parse("12345"), 12345)
+            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("12345"), 12345)
+            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("-12345"), -12345)
+            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("+12345"), 12345)
         }
     }
 
@@ -103,6 +103,10 @@ class ParseyTests: XCTestCase {
             try XCTAssertEqual(Lexer.regex("(Hello)*").parse("HelloHelloHello"), "HelloHelloHello")
             try XCTAssertEqual((Lexer.whitespaces ~~> Lexer.regex("(Hello)*")).parse(" HelloHelloHello"), "HelloHelloHello")
         }
+    }
+
+    func testLongerInteger() {
+
     }
 
     static var allTests : [(String, (ParseyTests) -> () throws -> Void)] {

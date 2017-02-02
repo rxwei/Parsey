@@ -276,6 +276,14 @@ public struct Parser<Target> {
         self.init { _ in throw failure }
     }
 
+    public static func success(_ target: Target) -> Parser<Target> {
+        return Parser(success: target)
+    }
+
+    public static func failure(_ failure: ParseFailure) -> Parser<Target> {
+        return Parser(failure: failure)
+    }
+
     /// Parse a string
     public func parse(_ input: String) throws -> Target {
         return try parse(ParserInput(input))
@@ -283,7 +291,7 @@ public struct Parser<Target> {
 
     private func parse(_ input: Input) throws -> Target {
         let output = try run(input)
-        guard output.rest.isEmpty else { throw ParseFailure(extraInput: output.rest) }
+        guard output.rest.isEmpty else { throw ParseFailure(input: output.rest) }
         return output.target
     }
 
@@ -358,6 +366,16 @@ extension Parser : FlatMappable {
         }
     }
 
+    public func flatMap<MapTarget>(_ transform: @escaping (Target) -> MapTarget?) -> Parser<MapTarget> {
+        return Parser<MapTarget> { input in
+            let out = try self.run(input)
+            guard let result = transform(out.target) else {
+                throw ParseFailure(input: input)
+            }
+            return Parse(target: result, range: out.range, rest: out.rest)
+        }
+    }
+
     public func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
@@ -413,5 +431,5 @@ extension Parser : FlatMappable {
             return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
-    
+
 }
