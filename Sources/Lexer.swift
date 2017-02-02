@@ -107,7 +107,7 @@ public extension Lexer {
 
     public static let end = Parser<String> { input in
         guard input.isEmpty else {
-            throw ParseFailure(extraInput: input)
+            throw ParseFailure(input: input)
         }
         return Parse(target: "", range: input.location..<input.location, rest: input)
     }

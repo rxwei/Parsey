@@ -9,12 +9,12 @@
 import Funky
 
 protocol ParseError : Error, CustomStringConvertible {
-    var expected: String { get }
+    var expected: String? { get }
     var input: ParserInput { get }
 }
 
 public struct ParseFailure : ParseError {
-    public var expected: String
+    public var expected: String?
     public var input: ParserInput
     internal var tagged: Bool = false
     internal var irrecoverable: Bool = false
@@ -24,8 +24,7 @@ public struct ParseFailure : ParseError {
         self.input = input
     }
 
-    public init(extraInput input: ParserInput) {
-        self.expected = "end of input"
+    public init(input: ParserInput) {
         self.input = input
     }
 
@@ -41,10 +40,12 @@ extension ParseFailure : CustomStringConvertible {
         if prefix.characters.count > 10 {
             prefix = String(prefix.characters.prefix(10)) + " ..."
         }
-        var desc = "Parse failure at \(input)\n"
-        desc += "Expecting \(expected)"
-        if !prefix.isEmpty {
-            desc += ", but I found \"\(prefix)\""
+        var desc = "Parse failure at \(input)"
+        if let expected = expected {
+            desc += "\nExpecting \(expected)"
+            if !prefix.isEmpty {
+                desc += ", but I found \"\(prefix)\""
+            }
         }
         return desc
     }
