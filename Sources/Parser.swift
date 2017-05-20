@@ -13,46 +13,47 @@ public typealias SourceRange = CountableRange<SourceLocation>
 
 /// Input with location tracking
 public struct ParserInput {
-
     public var lineStream: String.CharacterView
     public var stream: String.CharacterView
     public var location: SourceLocation
+}
 
-    public var line: String {
+public extension ParserInput {
+    var line: String {
         return String(lineStream.prefix(while: !="\n"))
     }
 
-    public var restLine: String {
+    var restLine: String {
         return String(stream.prefix(while: !="\n"))
     }
 
-    public var restLineLength: Int {
+    var restLineLength: Int {
         return String.CharacterView(stream.prefix(while: !="\n")).count
     }
 
-    public var lineLength: Int {
+    var lineLength: Int {
         return restLineLength + location.column - 1
     }
 
-    public var isEmpty: Bool {
+    var isEmpty: Bool {
         return stream.isEmpty
     }
 
-    public var first: Character? {
+    var first: Character? {
         return stream.first
     }
 
-    public var text: String {
+    var text: String {
         return String(stream)
     }
 
-    public init(_ string: String) {
+    init(_ string: String) {
         self.lineStream = string.characters
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
 
-    public init<S: Sequence>(_ stream: S) where S.Iterator.Element == Character {
+    init<S: Sequence>(_ stream: S) where S.Element == Character {
         self.lineStream = String.CharacterView(stream)
         self.stream = self.lineStream
         self.location = SourceLocation()
@@ -72,23 +73,6 @@ public struct ParserInput {
     }
 
 }
-
-/// `prefix(while:)` is not available in Swift 3.0.x
-#if !swift(>=3.1)
-extension Sequence where SubSequence : Sequence,
-                         SubSequence.Iterator.Element == Iterator.Element,
-                         SubSequence.SubSequence == SubSequence {
-    public func prefix(while predicate: (Iterator.Element) throws -> Bool)
-        rethrows -> AnySequence<Iterator.Element> {
-        var result: [Iterator.Element] = []
-        for element in self {
-            guard try predicate(element) else { break }
-            result.append(element)
-        }
-        return AnySequence(result)
-    }
-}
-#endif
 
 extension ParserInput : Sequence {
 
@@ -327,16 +311,11 @@ public struct Parser<Target> {
 
 }
 
-/// Monad
-extension Parser : FlatMappable {
+// MARK: - Mappable
+extension Parser : Mappable {
     public typealias MapSource = Target
     public typealias MapTarget = Any
     public typealias MapResult = Parser<MapTarget>
-    public typealias ApplicativeTransform = Parser<(Target) -> MapTarget>
-
-    public static func singleton(_ element: Target) -> Parser<Target> {
-        return Parser(success: element)
-    }
 
     /// Transform the target to another
     public func map<MapTarget>(_ transform: (Target) throws -> MapTarget) rethrows -> Parser<MapTarget> {
@@ -348,6 +327,16 @@ extension Parser : FlatMappable {
             }
         }
     }
+}
+
+// MARK: - ApplicativeMappable
+extension Parser : ApplicativeMappable {
+
+    public typealias ApplicativeTransform = Parser<(Target) -> MapTarget>
+
+    public static func singleton(_ element: Target) -> Parser<Target> {
+        return Parser(success: element)
+    }
 
     /// Apply the function result of a parser to the target
     public func apply<MapTarget>(_ transform: Parser<(Target) -> MapTarget>) -> Parser<MapTarget> {
@@ -358,6 +347,11 @@ extension Parser : FlatMappable {
             return Parse(target: out1.target(out2.target), range: newRange, rest: out2.rest)
         }
     }
+
+}
+
+// MARK: - FlatMappable
+extension Parser : FlatMappable {
 
     public func flatMap<MapTarget>(_ transform: (Target) throws -> Parser<MapTarget>) rethrows -> Parser<MapTarget> {
         return withoutActuallyEscaping(transform) { f in
@@ -382,7 +376,12 @@ extension Parser : FlatMappable {
         }
     }
 
-    public func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
+}
+
+// MARK: - Range support
+public extension Parser {
+
+    func mapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let newRange = input.location..<out.rest.location
@@ -390,7 +389,7 @@ extension Parser : FlatMappable {
         }
     }
 
-    public func applyRange<MapTarget>(_ transform: Parser<(Target, SourceRange) -> MapTarget>) -> Parser<MapTarget> {
+    func applyRange<MapTarget>(_ transform: Parser<(Target, SourceRange) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
@@ -399,7 +398,7 @@ extension Parser : FlatMappable {
         }
     }
 
-    public func flatMapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> Parser<MapTarget>) -> Parser<MapTarget> {
+    func flatMapRange<MapTarget>(_ transform: @escaping (Target, SourceRange) -> Parser<MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out.target, out.range).run(out.rest)
@@ -410,7 +409,7 @@ extension Parser : FlatMappable {
 
     /// Transform the parse to another
     /// The parse (not parser!) contains source range information
-    public func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
+    func mapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let newRange = input.location..<out.rest.location
@@ -420,7 +419,7 @@ extension Parser : FlatMappable {
 
     /// Apply the function result of a parser to the target
     /// The parse (not parser!) contains source range information
-    public func applyParse<MapTarget>(_ transform: Parser<(Parse<Target>) -> MapTarget>) -> Parser<MapTarget> {
+    func applyParse<MapTarget>(_ transform: Parser<(Parse<Target>) -> MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out1 = try transform.run(input)
             let out2 = try self.run(out1.rest)
@@ -429,7 +428,7 @@ extension Parser : FlatMappable {
         }
     }
 
-    public func flatMapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> Parser<MapTarget>) -> Parser<MapTarget> {
+    func flatMapParse<MapTarget>(_ transform: @escaping (Parse<Target>) -> Parser<MapTarget>) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let out = try self.run(input)
             let out2 = try transform(out).run(out.rest)

@@ -40,7 +40,7 @@ public extension Parser {
     /// Disable backtracking so that it won't pass the `or` operator if it fails
     /// Equivalent to `.!` operator
     /// - returns: same parser with backtracking disabled
-    public func nonbacktracking() -> Parser<Target> {
+    func nonbacktracking() -> Parser<Target> {
         return Parser { input in
             do {
                 return try self.run(input)
@@ -54,7 +54,7 @@ public extension Parser {
 
     /// Disable backtracking
     /// Same as `.nonbacktracking()`
-    public static postfix func .!(parser: Parser<Target>) -> Parser<Target> {
+    static postfix func .!(parser: Parser<Target>) -> Parser<Target> {
         return parser.nonbacktracking()
     }
 
@@ -62,7 +62,7 @@ public extension Parser {
     /// Equivalent to `..` operator
     /// - parameter tag: tag string
     /// - returns: the tagged parser
-    public func tagged(_ tag: String) -> Parser<Target> {
+    func tagged(_ tag: String) -> Parser<Target> {
         return Parser { input in
             do {
                 return try self.run(input)
@@ -74,7 +74,7 @@ public extension Parser {
         }
     }
 
-    public func satisfying(_ predicate: @escaping (Target) -> Bool) -> Parser<Target> {
+    func satisfying(_ predicate: @escaping (Target) -> Bool) -> Parser<Target> {
         return Parser { input in
             let out = try self.run(input)
             guard predicate(out.target) else {
@@ -89,7 +89,7 @@ public extension Parser {
     /// - returns: the tagged parser
     @available(*, renamed: "..")
     @inline(__always)
-    public static func <!--(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
+    static func <!--(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
         return lhs.tagged(rhs)
     }
 
@@ -97,13 +97,13 @@ public extension Parser {
     /// Equivalent to `.tagged(_:)`
     /// - returns: the tagged parser
     @inline(__always)
-    public static func ..(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
+    static func ..(lhs: Parser<Target>, rhs: String) -> Parser<Target> {
         return lhs.tagged(rhs)
     }
 
     /// Accept input zero or more times
     /// - returns: the composed parser
-    public func manyOrNone() -> Parser<[Target]> {
+    func manyOrNone() -> Parser<[Target]> {
         return Parser<[Target]> { input in
             var targets: [Target] = []
             var lastRest = input
@@ -124,7 +124,7 @@ public extension Parser {
 
     /// Skipped zero or more times without output
     /// - returns: the composed parser without output
-    public func skippedManyOrNone() -> Parser<()> {
+    func skippedManyOrNone() -> Parser<()> {
         return Parser<()> { input in
             var lastRest = input
             var endLoc = input.location
@@ -143,7 +143,7 @@ public extension Parser {
 
     /// Accept input one or more times
     /// - returns: the composed parser
-    public func many() -> Parser<[Target]> {
+    func many() -> Parser<[Target]> {
         return flatMap { out in
             self.manyOrNone().map { outs in
                 [out] + outs
@@ -153,21 +153,21 @@ public extension Parser {
 
     /// Skipped one or more times without output
     /// - returns: the composed parser without output
-    public func skippedMany() -> Parser<()> {
+    func skippedMany() -> Parser<()> {
         return self ~~> self.skippedManyOrNone()
     }
 
     /// With alternative parse result on failure
     /// - parameter default: alternative target
     /// - returns: the composed parser
-    public func withDefault(_ default: Target) -> Parser<Target> {
+    func withDefault(_ default: Target) -> Parser<Target> {
         return self | Parser(success: `default`)
     }
 
     /// Occuring exactly a number of times
     /// - parameter times: number of times
     /// - returns: the composed parser
-    public func occurring(_ times: Int) -> Parser<[Target]> {
+    func occurring(_ times: Int) -> Parser<[Target]> {
         return Parser<[Target]> { input in
             var targets: [Target] = []
             var lastRest = input
@@ -187,7 +187,7 @@ public extension Parser {
     /// - parameter left: parser of the left side
     /// - parameter left: parser of the right side
     /// - returns: the composed parser
-    public func between<Left, Right>(_ left: Parser<Left>,
+    func between<Left, Right>(_ left: Parser<Left>,
                         _ right: @autoclosure @escaping () -> Parser<Right>) -> Parser<Target> {
         return left.flatMap { _ in
             self.flatMap { out in right().map { _ in out } }
@@ -198,7 +198,7 @@ public extension Parser {
     /// Equivalent to `.between(surrounding, surrounding)`
     /// - parameter surrounding: parser of the surrounding
     /// - returns: the composed parser
-    public func amid<T>(_ surrounding: Parser<T>) -> Parser<Target> {
+    func amid<T>(_ surrounding: Parser<T>) -> Parser<Target> {
         return surrounding.flatMap { _ in
             self.flatMap { out in surrounding.map { _ in out } }
         }
@@ -207,7 +207,7 @@ public extension Parser {
     /// Accept input one or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
-    public func many<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
+    func many<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
         return flatMap { out in
             separator().skipped(to: self).manyOrNone().map { outs in
                 [out] + outs
@@ -218,7 +218,7 @@ public extension Parser {
     /// Accept input one or more times, separated by some separator
     /// - parameter separator: separator
     /// - returns: the composed parser
-    public func many(separatedBy separator: String) -> Parser<[Target]> {
+    func many(separatedBy separator: String) -> Parser<[Target]> {
         return flatMap { out in
             Lexer.token(separator).skipped(to: self).manyOrNone().map { outs in
                 [out] + outs
@@ -229,14 +229,14 @@ public extension Parser {
     /// Accept input zero or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
-    public func manyOrNone<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
+    func manyOrNone<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
         return many(separatedBy: separator) | Parser<[Target]>(success: [])
     }
 
     /// Accept input zero or more times, separated by some separator
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
-    public func manyOrNone(separatedBy separator: String) -> Parser<[Target]> {
+    func manyOrNone(separatedBy separator: String) -> Parser<[Target]> {
         return many(separatedBy: Lexer.token(separator)) | Parser<[Target]>(success: [])
     }
 
@@ -247,7 +247,7 @@ public extension Parser {
     /// Use this to construct parsers for dot-expressions like `expr.f().g().z()`
     /// - parameter suffix: suffix parser that produces a 1-place function
     /// - returns: the composed parser
-    public func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target) -> Target>) -> Parser<Target> {
+    func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target) -> Target>) -> Parser<Target> {
         func rest(_ x: Target) -> Parser<Target> {
             return suffix().flatMap { f in rest(f(x)) } | .return(x)
         }
@@ -261,7 +261,7 @@ public extension Parser {
     /// Use this to construct parsers for dot-expressions like `expr.f().g().z()`
     /// - parameter suffix: suffix parser that produces a 1-place function
     /// - returns: the composed parser
-    public func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target, SourceRange) -> Target>) -> Parser<Target> {
+    func suffixed(by suffix: @autoclosure @escaping () -> Parser<(Target, SourceRange) -> Target>) -> Parser<Target> {
         func rest(_ x: Target, _ lhsRange: SourceRange) -> Parser<Target> {
             return suffix().flatMapRange { f, rhsRange in
                 let range = lhsRange.lowerBound..<rhsRange.upperBound
@@ -277,7 +277,7 @@ public extension Parser {
     ///     (<op> (<op> (<op> (<a> <op> <a>) <a>) <a>) <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
+    func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
         func rest(_ x: Target) -> Parser<Target> {
             return op().flatMap { f in self.flatMap { y in rest(f(x, y)) } } | .return(x)
         }
@@ -290,7 +290,7 @@ public extension Parser {
     ///     (<op> (<op> (<op> (<a> <op> <a>) <a>) <a>) <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
+    func infixedLeft(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
         func rest(_ x: Target, _ lhsRange: SourceRange) -> Parser<Target> {
             return op().flatMap { f in
                 self.flatMapRange { y, rhsRange in
@@ -307,7 +307,7 @@ public extension Parser {
     ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
+    func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target) -> Target>) -> Parser<Target> {
         func scan() -> Parser<Target> {
             return flatMap(rest)
         }
@@ -322,7 +322,7 @@ public extension Parser {
     ///     ((((<a> <op> <a>) <op> <a>) <op> <a>) <op> <a>)
     /// - parameter op: infix operator parser that produces a 2-place function
     /// - returns: the composed parser
-    public func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
+    func infixedRight(by op: @autoclosure @escaping () -> Parser<(Target, Target, SourceRange) -> Target>) -> Parser<Target> {
         func scan() -> Parser<Target> {
             return flatMapRange(rest)
         }
@@ -341,7 +341,7 @@ public extension Parser {
     /// Equivalent to `<~~` operator
     /// - parameter terminator: the parser of the rest input
     /// - returns: the composed parser
-    public func ended<T>(by terminator: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
+    func ended<T>(by terminator: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
         return flatMap { res in terminator().map { _ in res } }
     }
 
@@ -350,7 +350,7 @@ public extension Parser {
     /// Equivalent to `~~` operator.
     /// - parameter terminator: the parser of the rest input
     /// - returns: the composed parser
-    public func followed<T>(by follower: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
+    func followed<T>(by follower: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
         return flatMap { out1 in follower().map { out2 in (out1, out2) } }
     }
 
@@ -359,20 +359,20 @@ public extension Parser {
     /// - parameter follower: the parser of the rest input
     /// - returns: the composed parser
     @inline(__always)
-    public func skipped<T>(to follower: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
+    func skipped<T>(to follower: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
         return flatMap { _ in follower() }
     }
 
     /// Drop the result
     /// - returns: same parser without output
     @inline(__always)
-    public func skipped() -> Parser<()> {
+    func skipped() -> Parser<()> {
         return map { _ in () }
     }
 
     /// Make optional
     /// - returns: the composed parser that accepts the original input or nothing
-    public func optional() -> Parser<Target?> {
+    func optional() -> Parser<Target?> {
         return map{$0} | .return(nil)
     }
 
@@ -380,12 +380,12 @@ public extension Parser {
     /// Same as `.skipped(to:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
+    static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
         return lhs.skipped(to: rhs)
     }
 
     @inline(__always)
-    public static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
+    static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
         return lhs.nonbacktracking().skipped(to: rhs)
     }
 
@@ -393,12 +393,12 @@ public extension Parser {
     /// Same as `.ended(by:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
+    static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
         return lhs.ended(by: rhs)
     }
 
     @inline(__always)
-    public static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
+    static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
         return lhs.nonbacktracking().ended(by: rhs)
     }
 
@@ -407,7 +407,7 @@ public extension Parser {
     /// Same as `.followed(by:)`
     /// - returns: the composed parser
     @inline(__always)
-    static public func ~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
+    static func ~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
         return lhs.followed(by: rhs)
     }
 
@@ -416,18 +416,18 @@ public extension Parser {
     /// Same as `.followed(by:)`
     /// - returns: the composed parser
     @inline(__always)
-    static public func !~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
+    static func !~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
         return lhs.nonbacktracking().followed(by: rhs)
     }
 
     @inline(__always)
-    public static func ** <MapTarget>(
+    static func ** <MapTarget>(
         _ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.apply(lhs)
     }
 
     @inline(__always)
-    public static func !** <MapTarget>(
+    static func !** <MapTarget>(
         _ lhs: Parser<(Target) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.nonbacktracking().apply(lhs)
     }
@@ -436,7 +436,7 @@ public extension Parser {
     /// Same as `.map(_:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func ^^ <MapTarget>(
+    static func ^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return lhs.map(rhs)
     }
@@ -444,7 +444,7 @@ public extension Parser {
     /// Transform the target to the desired data structure
     /// - returns: the composed parser
     @inline(__always)
-    public static func ^^= <MapTarget>(
+    static func ^^= <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
         return lhs.map { _ in rhs }
     }
@@ -453,19 +453,19 @@ public extension Parser {
     /// Same as `.mapRange(_:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func ^^^ <MapTarget>(
+    static func ^^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return lhs.mapRange(rhs)
     }
 
     @inline(__always)
-    public static func ** <MapTarget>(
+    static func ** <MapTarget>(
         _ lhs: Parser<(Target, SourceRange) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.applyRange(lhs)
     }
 
     @inline(__always)
-    public static func ** <MapTarget>(
+    static func ** <MapTarget>(
         _ lhs: Parser<(Target) -> (SourceRange) -> MapTarget>, _ rhs: Parser<Target>) -> Parser<MapTarget> {
         return rhs.applyRange(lhs.map(uncurry))
     }
@@ -474,55 +474,55 @@ public extension Parser {
     /// Same as `.mapParse(_:)`
     /// - returns: the composed parser
     @inline(__always)
-    public static func ^^& <MapTarget>(
+    static func ^^& <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.mapParse(rhs)
     }
 
     @inline(__always)
-    public static func !^^ <MapTarget>(
+    static func !^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().map(rhs)
     }
 
     @inline(__always)
-    public static func !^^= <MapTarget>(
+    static func !^^= <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().map { _ in rhs }
     }
 
     @inline(__always)
-    public static func !^^^ <MapTarget>(
+    static func !^^^ <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Target, SourceRange) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().mapRange(rhs)
     }
 
     @inline(__always)
-    public static func !^^& <MapTarget>(
+    static func !^^& <MapTarget>(
         _ lhs: Parser<Target>, _ rhs: @escaping (Parse<Target>) -> MapTarget) -> Parser<MapTarget> {
         return lhs.nonbacktracking().mapParse(rhs)
     }
 
     /// Same as `.optional()`
     @inline(__always)
-    public static postfix func .? (_ parser: Parser<Target>) -> Parser<Target?> {
+    static postfix func .? (_ parser: Parser<Target>) -> Parser<Target?> {
         return parser.optional()
     }
 
     /// Same as `.many()`
     @inline(__always)
-    public static postfix func .+ (parser: Parser<Target>) -> Parser<[Target]> {
+    static postfix func .+ (parser: Parser<Target>) -> Parser<[Target]> {
         return parser.many()
     }
 
     /// Same as `.manyOrNone()`
     @inline(__always)
-    public static postfix func .* (parser: Parser<Target>) -> Parser<[Target]> {
+    static postfix func .* (parser: Parser<Target>) -> Parser<[Target]> {
         return parser.manyOrNone()
     }
 
     @inline(__always)
-    public static postfix func .^ (parser: Parser<(SourceRange) -> Target>) -> Parser<Target> {
+    static postfix func .^ (parser: Parser<(SourceRange) -> Target>) -> Parser<Target> {
         return parser.mapRange { target, range in target(range) }
     }
 
@@ -530,61 +530,60 @@ public extension Parser {
 
 /// When target is associative (i.e. monoid), a string for example,
 /// this set of combinators are extremely useful.
-public extension Parser where Target : Associative {
+public extension Parser where Target : Associable {
 
     /// Maybe empty
     /// - returns: the same parser but produces identity on failure
-    public func maybeEmpty() -> Parser<Target> {
+    func maybeEmpty() -> Parser<Target> {
         return self | .return(Target.identity)
     }
 
     /// Concatenate the result with the other parser's
     /// - parameter next: parser of the right side
     /// - returns: the composed parser that produces concatenated result
-    public func concatenatingResult(with next: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
+    func concatenatingResult(with next: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return flatMap { out1 in next().map { out2 in out1 + out2 } }
     }
 
     /// Concatenate results one or more times
     /// Equivalent to `.many().concatenated()`
     /// - returns: the composed parser that produces concatenated result
-    public func manyConcatenated() -> Parser<Target> {
+    func manyConcatenated() -> Parser<Target> {
         return many().concatenated()
     }
 
     /// Concatenate the result with the other parser's
     /// Equivalent to `.manyOrNone().concatenated()`
     /// - returns: the composed parser that produces concatenated result
-    public func manyConcatenatedOrNone() -> Parser<Target> {
+    func manyConcatenatedOrNone() -> Parser<Target> {
         return manyOrNone().concatenated()
     }
 
     /// Concatenate results zero or more times
     /// Same as `.concatenatingResult(with:)`
     /// - returns: the composed parser that produces concatenated result
-    public static func +(lhs: Parser<Target>, rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
+    static func +(lhs: Parser<Target>, rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
         return lhs.concatenatingResult(with: rhs)
     }
 
     /// Concatenate results one or more times
     /// Same as `.manyConcatenated()`
     /// - returns: the composed parser that produces concatenated result
-    public static postfix func +(parser: Parser<Target>) -> Parser<Target> {
+    static postfix func +(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenated()
     }
 
     /// Concatenate results zero or more times
     /// Same as `.manyConcatenatedOrNone()`
     /// - returns: the composed parser that produces concatenated result
-    public static postfix func *(parser: Parser<Target>) -> Parser<Target> {
+    static postfix func *(parser: Parser<Target>) -> Parser<Target> {
         return parser.manyConcatenatedOrNone()
     }
 
 }
 
 public extension Parser where Target : Hashable {
-
-    public func map<MapTarget>(_ mappings: [Target : MapTarget]) -> Parser<MapTarget> {
+    func map<MapTarget>(_ mappings: [Target : MapTarget]) -> Parser<MapTarget> {
         return Parser<MapTarget> { input in
             let parse = try self.run(input)
             guard let target = mappings[parse.target] else {
@@ -594,7 +593,6 @@ public extension Parser where Target : Hashable {
             return Parse(target: target, range: parse.range, rest: parse.rest)
         }
     }
-    
 }
 
 public extension Parser where Target : Sequence, Target.Iterator.Element : Associative {
@@ -602,5 +600,4 @@ public extension Parser where Target : Sequence, Target.Iterator.Element : Assoc
     public func concatenated() -> Parser<Target.Iterator.Element> {
         return map { $0.reduced() }
     }
-    
 }

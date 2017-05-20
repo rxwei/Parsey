@@ -9,20 +9,19 @@
 import Funky
 
 internal extension Parse {
-
     init(input: ParserInput, target: Target, length: Int) {
         self.rest = input.dropFirst(length)
         self.range = input.location..<rest.location
         self.target = target
     }
-
 }
 
-public enum Lexer {
-    
-    /// TODO: Remove duplicate code in here
+public enum Lexer {}
 
-    public static func character(_ char: Character) -> Parser<String> {
+/// TODO: Remove duplicate code in here
+public extension Lexer {
+
+    static func character(_ char: Character) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, first == char else {
                 throw ParseFailure(expected: String(char), input: input)
@@ -31,7 +30,7 @@ public enum Lexer {
         }
     }
 
-    public static func anyCharacter(in range: ClosedRange<Character>) -> Parser<String> {
+    static func anyCharacter(in range: ClosedRange<Character>) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, range.contains(first) else {
                 throw ParseFailure(expected: "a character within range \(range)", input: input)
@@ -40,8 +39,8 @@ public enum Lexer {
         }
     }
 
-    public static func anyCharacter<S: Sequence>(in characters: S) -> Parser<String>
-        where S.Iterator.Element == Character
+    static func anyCharacter<S: Sequence>(in characters: S) -> Parser<String>
+        where S.Element == Character
     {
         return Parser { input in
             guard let first = input.first, characters.contains(first) else {
@@ -54,11 +53,11 @@ public enum Lexer {
         }
     }
 
-    public static func anyCharacter(in characterString: String) -> Parser<String> {
+    static func anyCharacter(in characterString: String) -> Parser<String> {
         return anyCharacter(in: characterString.characters)
     }
 
-    public static func anyCharacter(except exception: Character) -> Parser<String> {
+    static func anyCharacter(except exception: Character) -> Parser<String> {
         return Parser { input in
             guard let first = input.first, first != exception else {
                 throw ParseFailure(expected: "any character except \"\(exception)\"", input: input)
@@ -67,8 +66,8 @@ public enum Lexer {
         }
     }
 
-    public static func anyCharacter<S: Sequence>(except exceptions: S) -> Parser<String>
-        where S.Iterator.Element == Character
+    static func anyCharacter<S: Sequence>(except exceptions: S) -> Parser<String>
+        where S.Element == Character
     {
         return Parser { input in
             guard let first = input.first, !exceptions.contains(first) else {
@@ -86,26 +85,26 @@ public enum Lexer {
 /// MARK: - Primitives
 public extension Lexer {
 
-    public static let space           = character(" ")
-    public static let tab             = character("\t")
+    static let space           = character(" ")
+    static let tab             = character("\t")
 
-    public static let whitespace      = anyCharacter(in: [" ", "\t"])
-    public static let whitespaces     = whitespace+
+    static let whitespace      = anyCharacter(in: [" ", "\t"])
+    static let whitespaces     = whitespace+
     
-    public static let newLine         = anyCharacter(in: ["\n", "\r"])
-    public static let newLines        = newLine+
+    static let newLine         = anyCharacter(in: ["\n", "\r"])
+    static let newLines        = newLine+
     
-    public static let upperLetter     = anyCharacter(in: "A"..."Z")
-    public static let lowerLetter     = anyCharacter(in: "a"..."z")
-    public static let letter          = upperLetter | lowerLetter
+    static let upperLetter     = anyCharacter(in: "A"..."Z")
+    static let lowerLetter     = anyCharacter(in: "a"..."z")
+    static let letter          = upperLetter | lowerLetter
 
-    public static let digit           = anyCharacter(in: "0"..."9")
-    public static let unsignedInteger = digit.manyConcatenated()
-    public static let unsignedDecimal = unsignedInteger + character(".") + unsignedInteger
-    public static let signedInteger   = anyCharacter(in: "+-").maybeEmpty() + unsignedInteger
-    public static let signedDecimal   = anyCharacter(in: "+-").maybeEmpty() + unsignedDecimal
+    static let digit           = anyCharacter(in: "0"..."9")
+    static let unsignedInteger = digit.manyConcatenated()
+    static let unsignedDecimal = unsignedInteger + character(".") + unsignedInteger
+    static let signedInteger   = anyCharacter(in: "+-").maybeEmpty() + unsignedInteger
+    static let signedDecimal   = anyCharacter(in: "+-").maybeEmpty() + unsignedDecimal
 
-    public static let end = Parser<String> { input in
+    static let end = Parser<String> { input in
         guard input.isEmpty else {
             throw ParseFailure(input: input)
         }
@@ -121,19 +120,19 @@ public extension Lexer {
 
     /// Parse a string until it sees a character in the exception list,
     /// without consuming the character
-    public static func string<S: Sequence>(until exception: S) -> Parser<String>
-        where S.Iterator.Element == Character {
+    static func string<S: Sequence>(until exception: S) -> Parser<String>
+        where S.Element == Character {
         return anyCharacter(except: exception).manyConcatenated()
     }
 
     /// Parse a string until it sees a the exception character, 
     /// without consuming the character
-    public static func string(until character: Character) -> Parser<String> {
+    static func string(until character: Character) -> Parser<String> {
         return anyCharacter(except: character).manyConcatenated()
     }
 
     /// Match regular expression
-    public static func regex(_ pattern: String) -> Parser<String> {
+    static func regex(_ pattern: String) -> Parser<String> {
         return Parser<String> { input in
             #if !os(macOS) && !swift(>=3.1) /// Swift standard library inconsistency!
             let regex = try RegularExpression(pattern: pattern, options: [ .dotMatchesLineSeparators ])
@@ -158,13 +157,13 @@ public extension Lexer {
     /// Match any token in the collection
     /// - Note: Since this is based on regular expression matching, you should be careful
     /// with special regex characters
-    public static func token<C: Collection>(in tokens: C) -> Parser<String>
-        where C.Iterator.Element == String {
+    static func token<C: Collection>(in tokens: C) -> Parser<String>
+        where C.Element == String {
         return regex(tokens.joined(separator: "|"))
     }
 
     /// Parse an explicit token
-    public static func token(_ token: String) -> Parser<String> {
+    static func token(_ token: String) -> Parser<String> {
         return Parser<String> { input in
             guard input.starts(with: token.characters) else {
                 throw ParseFailure(expected: "token \"\(token)\"", input: input)
@@ -178,27 +177,27 @@ public extension Lexer {
 /// MARK: - Combinator extension on strings
 public extension Parser {
 
-    public func amid(_ surrounding: String) -> Parser<Target> {
+    func amid(_ surrounding: String) -> Parser<Target> {
         return amid(Lexer.token(surrounding))
     }
 
-    public func between(_ left: String, _ right: String) -> Parser<Target> {
+    func between(_ left: String, _ right: String) -> Parser<Target> {
         return between(Lexer.token(left), Lexer.token(right))
     }
 
-    public static func ~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
+    static func ~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
         return Lexer.token(lhs) ~~> rhs
     }
 
-    public static func !~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
+    static func !~~>(_ lhs: String, _ rhs: Parser<Target>) -> Parser<Target> {
         return Lexer.token(lhs) !~~> rhs
     }
 
-    public static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
+    static func <~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
         return lhs <~~ Lexer.token(rhs)
     }
 
-    public static func !<~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
+    static func !<~~(_ lhs: Parser<Target>, _ rhs: String) -> Parser<Target> {
         return lhs !<~~ Lexer.token(rhs)
     }
 
