@@ -7,7 +7,7 @@
 //
 
 /// Two dimentional text location with line number, column number and linear index
-public protocol TextLocation : Comparable, Strideable {
+public protocol TextLocation : Strideable {
     var line: Int { set get }
     var column: Int { set get }
     var index: Int { set get }
