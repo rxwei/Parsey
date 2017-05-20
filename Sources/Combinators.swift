@@ -595,9 +595,10 @@ public extension Parser where Target : Hashable {
     }
 }
 
-public extension Parser where Target : Sequence, Target.Iterator.Element : Associative {
-    
-    public func concatenated() -> Parser<Target.Iterator.Element> {
-        return map { $0.reduced() }
+public extension Parser where Target : Sequence & Reducible, Target.Element : Associable {
+    func concatenated() -> Parser<Target.Element> {
+        return map {
+            $0.reduced()
+        }
     }
 }
