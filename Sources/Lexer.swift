@@ -54,7 +54,7 @@ public extension Lexer {
     }
 
     static func anyCharacter(in characterString: String) -> Parser<String> {
-        return anyCharacter(in: characterString.characters)
+        return anyCharacter(in: characterString[characterString.startIndex ..< characterString.endIndex])
     }
 
     static func anyCharacter(except exception: Character) -> Parser<String> {
@@ -150,7 +150,7 @@ public extension Lexer {
             }
             /// UTF16 conversion is safe here since NSRegularExpression results are based on UTF16
             let matchedText = String(text.utf16.prefix(match.range.length))!
-            return Parse(input: input, target: matchedText, length: matchedText.characters.count)
+            return Parse(input: input, target: matchedText, length: matchedText.count)
         }
     }
 
@@ -165,10 +165,10 @@ public extension Lexer {
     /// Parse an explicit token
     static func token(_ token: String) -> Parser<String> {
         return Parser<String> { input in
-            guard input.starts(with: token.characters) else {
+            guard input.starts(with: token) else {
                 throw ParseFailure(expected: "token \"\(token)\"", input: input)
             }
-            return Parse(input: input, target: token, length: token.characters.count)
+            return Parse(input: input, target: token, length: token.count)
         }
     }
 

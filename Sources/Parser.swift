@@ -13,8 +13,8 @@ public typealias SourceRange = CountableRange<SourceLocation>
 
 /// Input with location tracking
 public struct ParserInput {
-    public var lineStream: String.CharacterView
-    public var stream: String.CharacterView
+    public var lineStream: String
+    public var stream: String
     public var location: SourceLocation
 }
 
@@ -28,7 +28,7 @@ public extension ParserInput {
     }
 
     var restLineLength: Int {
-        return String.CharacterView(stream.prefix(while: !="\n")).count
+        return String(stream.prefix(while: !="\n")).count
     }
 
     var lineLength: Int {
@@ -48,26 +48,27 @@ public extension ParserInput {
     }
 
     init(_ string: String) {
-        self.lineStream = string.characters
+        self.lineStream = string
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
 
     init<S: Sequence>(_ stream: S) where S.Element == Character {
-        self.lineStream = String.CharacterView(stream)
+        self.lineStream = String(stream)
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
 
-    internal init(stream: String.CharacterView, lineStream: String.CharacterView,
-                  location: SourceLocation = SourceLocation()) {
+    internal init(
+        stream: String, lineStream: String, location: SourceLocation = SourceLocation())
+    {
         self.lineStream = lineStream
         self.stream = stream
         self.location = location
     }
 
     internal init() {
-        self.lineStream = String.CharacterView()
+        self.lineStream = String()
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
@@ -78,7 +79,7 @@ extension ParserInput : Sequence {
 
     public func prefix(_ maxLength: Int) -> ParserInput {
         return ParserInput(
-            stream: stream.prefix(maxLength),
+            stream: String(stream.prefix(maxLength)),
             lineStream: lineStream,
             location: location
         )
@@ -89,16 +90,16 @@ extension ParserInput : Sequence {
         return prefixLength < 0 ? self : dropFirst(prefixLength)
     }
 
-    public typealias Iterator = String.CharacterView.Iterator
+    public typealias Iterator = String.Iterator
     public typealias SubSequence = ParserInput
 
-    public func makeIterator() -> String.CharacterView.Iterator {
+    public func makeIterator() -> String.Iterator {
         return stream.makeIterator()
     }
 
     public func prefix(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
         var newLoc = location
-        var newStream = String.CharacterView()
+        var newStream = String()
         for char in stream {
             guard try predicate(char) else { break }
             newStream.append(char)
@@ -141,13 +142,13 @@ extension ParserInput : Sequence {
         if first == "\n" {
             let newStream = stream.dropFirst()
             return ParserInput(
-                stream: newStream,
-                lineStream: newStream,
+                stream: String(newStream),
+                lineStream: String(newStream),
                 location: location.newLine()
             )
         }
         return ParserInput(
-            stream: stream.dropFirst(),
+            stream: String(stream.dropFirst()),
             lineStream: lineStream,
             location: location.advanced(by: 1)
         )
@@ -176,11 +177,11 @@ extension ParserInput : Sequence {
     }
 
     public func dropLast() -> ParserInput {
-        return ParserInput(stream: stream, lineStream: stream.dropLast(), location: location)
+        return ParserInput(stream: stream, lineStream: String(stream.dropLast()), location: location)
     }
 
     public func dropLast(_ n: Int) -> ParserInput {
-        return ParserInput(stream: stream, lineStream: stream.dropLast(n), location: location)
+        return ParserInput(stream: stream, lineStream: String(stream.dropLast(n)), location: location)
     }
 
     /// TODO: Need location tracking!
