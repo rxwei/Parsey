@@ -3,13 +3,11 @@ import XCTest
 
 class ParseyTests: XCTestCase {
 
-    func testIntegers() {
-        do {
-            try XCTAssertEqual(Lexer.unsignedInteger.flatMap{Int($0)}.parse("12345"), 12345)
-            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("12345"), 12345)
-            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("-12345"), -12345)
-            try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("+12345"), 12345)
-        }
+    func testIntegers() throws {
+        try XCTAssertEqual(Lexer.unsignedInteger.flatMap{Int($0)}.parse("12345"), 12345)
+        try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("12345"), 12345)
+        try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("-12345"), -12345)
+        try XCTAssertEqual(Lexer.signedInteger.flatMap{Int($0)}.parse("+12345"), 12345)
     }
 
     func testSourceRange() throws {
@@ -97,23 +95,26 @@ class ParseyTests: XCTestCase {
         }
     }
 
-    func testStrings() {
-        do {
-            try XCTAssertEqual(Lexer.token("Hello").parse("Hello"), "Hello")
-            try XCTAssertEqual(Lexer.regex("(Hello)*").parse("HelloHelloHello"), "HelloHelloHello")
-            try XCTAssertEqual((Lexer.whitespaces ~~> Lexer.regex("(Hello)*")).parse(" HelloHelloHello"), "HelloHelloHello")
-        }
+    func testStrings() throws {
+        try XCTAssertEqual(Lexer.token("Hello").parse("Hello"), "Hello")
+        try XCTAssertEqual(Lexer.regex("(Hello)*").parse("HelloHelloHello"), "HelloHelloHello")
+        try XCTAssertEqual((Lexer.whitespaces ~~> Lexer.regex("(Hello)*")).parse(" HelloHelloHello"), "HelloHelloHello")
     }
 
-    func testLongerInteger() {
-
+    func testNonAsciiCharacters() throws {
+        try XCTAssertEqual(Lexer.token("あ").parse("あ"), "あ")
+        try XCTAssertEqual(Lexer.token("שלום").parse("שלום"), "שלום")
+        try XCTAssertEqual(Lexer.token("مرحبا").parse("مرحبا"), "مرحبا")
+        try XCTAssertEqual(Lexer.token("🐶").parse("🐶"), "🐶")
+        try XCTAssertEqual(Lexer.regex("(あ)*").parse("あああ"), "あああ")
+        try XCTAssertEqual((Lexer.whitespaces ~~> Lexer.regex("(あ)*")).parse(" あああ"), "あああ")
     }
 
-    static var allTests : [(String, (ParseyTests) -> () throws -> Void)] {
-        return [
-            ("testIntegers", testIntegers),
-            ("testSourceRange", testSourceRange),
-            ("testStrings", testStrings),
-        ]
-    }
+    static var allTests = [
+        ("testIntegers", testIntegers),
+        ("testSourceRange", testSourceRange),
+        ("testLeftAssociativeOperator", testLeftAssociativeOperator),
+        ("testStrings", testStrings),
+        ("testNonAsciiCharacters", testNonAsciiCharacters),
+    ]
 }

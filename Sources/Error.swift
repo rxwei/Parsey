@@ -37,8 +37,8 @@ public struct ParseFailure : ParseError {
 extension ParseFailure : CustomStringConvertible {
     public var description: String {
         var prefix = input.restLine
-        if prefix.characters.count > 10 {
-            prefix = String(prefix.characters.prefix(10)) + " ..."
+        if prefix.count > 10 {
+            prefix = String(prefix.prefix(10)) + " ..."
         }
         var desc = "Parse failure at \(input)"
         if let expected = expected {

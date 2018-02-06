@@ -13,8 +13,8 @@ public typealias SourceRange = CountableRange<SourceLocation>
 
 /// Input with location tracking
 public struct ParserInput {
-    public var lineStream: String.CharacterView
-    public var stream: String.CharacterView
+    public var lineStream: Substring
+    public var stream: Substring
     public var location: SourceLocation
 }
 
@@ -28,7 +28,7 @@ public extension ParserInput {
     }
 
     var restLineLength: Int {
-        return String.CharacterView(stream.prefix(while: !="\n")).count
+        return String(stream.prefix(while: !="\n")).count
     }
 
     var lineLength: Int {
@@ -48,26 +48,27 @@ public extension ParserInput {
     }
 
     init(_ string: String) {
-        self.lineStream = string.characters
+        self.lineStream = Substring(string)
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
 
     init<S: Sequence>(_ stream: S) where S.Element == Character {
-        self.lineStream = String.CharacterView(stream)
+        self.lineStream = Substring(stream)
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
 
-    internal init(stream: String.CharacterView, lineStream: String.CharacterView,
-                  location: SourceLocation = SourceLocation()) {
+    internal init(
+        stream: Substring, lineStream: Substring, location: SourceLocation = SourceLocation())
+    {
         self.lineStream = lineStream
         self.stream = stream
         self.location = location
     }
 
     internal init() {
-        self.lineStream = String.CharacterView()
+        self.lineStream = Substring()
         self.stream = self.lineStream
         self.location = SourceLocation()
     }
@@ -89,16 +90,16 @@ extension ParserInput : Sequence {
         return prefixLength < 0 ? self : dropFirst(prefixLength)
     }
 
-    public typealias Iterator = String.CharacterView.Iterator
+    public typealias Iterator = Substring.Iterator
     public typealias SubSequence = ParserInput
 
-    public func makeIterator() -> String.CharacterView.Iterator {
+    public func makeIterator() -> Substring.Iterator {
         return stream.makeIterator()
     }
 
     public func prefix(while predicate: (Character) throws -> Bool) rethrows -> ParserInput {
         var newLoc = location
-        var newStream = String.CharacterView()
+        var newStream = Substring()
         for char in stream {
             guard try predicate(char) else { break }
             newStream.append(char)
