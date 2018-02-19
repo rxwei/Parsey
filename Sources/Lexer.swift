@@ -54,7 +54,7 @@ public extension Lexer {
     }
 
     static func anyCharacter(in characterString: String) -> Parser<String> {
-        return anyCharacter(in: characterString[characterString.startIndex ..< characterString.endIndex])
+        return anyCharacter(in: Array(characterString[characterString.startIndex ..< characterString.endIndex]))
     }
 
     static func anyCharacter(except exception: Character) -> Parser<String> {
@@ -90,10 +90,10 @@ public extension Lexer {
 
     static let whitespace      = anyCharacter(in: [" ", "\t"])
     static let whitespaces     = whitespace+
-    
+
     static let newLine         = anyCharacter(in: ["\n", "\r"])
     static let newLines        = newLine+
-    
+
     static let upperLetter     = anyCharacter(in: "A"..."Z")
     static let lowerLetter     = anyCharacter(in: "a"..."z")
     static let letter          = upperLetter | lowerLetter
@@ -125,7 +125,7 @@ public extension Lexer {
         return anyCharacter(except: exception).manyConcatenated()
     }
 
-    /// Parse a string until it sees a the exception character, 
+    /// Parse a string until it sees a the exception character,
     /// without consuming the character
     static func string(until character: Character) -> Parser<String> {
         return anyCharacter(except: character).manyConcatenated()
