@@ -6,8 +6,6 @@
 //
 //
 
-import Funky
-
 protocol ParseError : Error, CustomStringConvertible {
     var expected: String? { get }
     var input: ParserInput { get }

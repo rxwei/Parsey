@@ -6,8 +6,6 @@
 //
 //
 
-import Funky
-
 infix operator ~~>  : FunctionCompositionPrecedence   /// .skipped(to:)
 infix operator !~~> : FunctionCompositionPrecedence   /// .nonbacktracking().skipped(to:)
 infix operator <~~  : FunctionCompositionPrecedence   /// .ended(by:)

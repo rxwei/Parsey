@@ -6,8 +6,6 @@
 //
 //
 
-import Funky
-
 /// Range from a source location to another, for range tracking
 public typealias SourceRange = CountableRange<SourceLocation>
 

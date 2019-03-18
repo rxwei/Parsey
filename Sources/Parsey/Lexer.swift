@@ -6,8 +6,6 @@
 //
 //
 
-import Funky
-
 internal extension Parse {
     init(input: ParserInput, target: Target, length: Int) {
         self.rest = input.dropFirst(length)
