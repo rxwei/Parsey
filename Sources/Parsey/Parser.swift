@@ -317,13 +317,11 @@ extension Parser : Mappable {
     public typealias MapResult = Parser<MapTarget>
 
     /// Transform the target to another
-    public func map<MapTarget>(_ transform: (Target) throws -> MapTarget) rethrows -> Parser<MapTarget> {
-        return withoutActuallyEscaping(transform) { f in
-            Parser<MapTarget> { input in
-                let out = try self.run(input)
-                let newRange = input.location..<out.rest.location
-                return Parse(target: try f(out.target), range: newRange, rest: out.rest)
-            }
+    public func map<MapTarget>(_ transform: @escaping (Target) throws -> MapTarget) rethrows -> Parser<MapTarget> {
+        Parser<MapTarget> { input in
+            let out = try self.run(input)
+            let newRange = input.location..<out.rest.location
+            return Parse(target: try transform(out.target), range: newRange, rest: out.rest)
         }
     }
 }
@@ -351,27 +349,23 @@ extension Parser : ApplicativeMappable {
 
 // MARK: - FlatMappable
 extension Parser : FlatMappable {
-
-    public func flatMap<MapTarget>(_ transform: (Target) throws -> Parser<MapTarget>) rethrows -> Parser<MapTarget> {
-        return withoutActuallyEscaping(transform) { f in
-            Parser<MapTarget> { input in
-                let out = try self.run(input)
-                let out2 = try f(out.target).run(out.rest)
-                let newRange = input.location..<out2.rest.location
-                return Parse(target: out2.target, range: newRange, rest: out2.rest)
-            }
+    
+    public func flatMap<MapTarget>(_ transform: @escaping (Target) throws -> Parser<MapTarget>) rethrows -> Parser<MapTarget> {
+        Parser<MapTarget> { input in
+            let out = try self.run(input)
+            let out2 = try transform(out.target).run(out.rest)
+            let newRange = input.location..<out2.rest.location
+            return Parse(target: out2.target, range: newRange, rest: out2.rest)
         }
     }
-
-    public func flatMap<MapTarget>(_ transform: (Target) -> MapTarget?) -> Parser<MapTarget> {
-        return withoutActuallyEscaping(transform) { f in
-            Parser<MapTarget> { input in
-                let out = try self.run(input)
-                guard let result = f(out.target) else {
-                    throw ParseFailure(input: input)
-                }
-                return Parse(target: result, range: out.range, rest: out.rest)
+    
+    public func flatMap<MapTarget>(_ transform: @escaping (Target) -> MapTarget?) -> Parser<MapTarget> {
+        Parser<MapTarget> { input in
+            let out = try self.run(input)
+            guard let result = transform(out.target) else {
+                throw ParseFailure(input: input)
             }
+            return Parse(target: result, range: out.range, rest: out.rest)
         }
     }
 
