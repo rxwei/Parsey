@@ -12,7 +12,7 @@ public protocol SingletonCollection : Collection {
 
 #if swift(>=4.0)
 public extension SingletonCollection where Self : ExpressibleByArrayLiteral, Self.ArrayLiteralElement == Element {
-    public init(singleton: Element) {
+    init(singleton: Element) {
         self = [singleton]
     }
 }
@@ -26,7 +26,7 @@ extension CollectionOfOne : SingletonCollection {
 
 }
 
-extension String.CharacterView : SingletonCollection {
+extension String : SingletonCollection {
 
     public init(singleton: Character) {
         self.init()

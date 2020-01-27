@@ -15,7 +15,6 @@ extension Set : Mappable {
     public func map<MapTarget>(_ transform: (MapSource) throws -> MapTarget) rethrows -> Set<MapTarget> {
         return try reduce([]) { acc, x in try acc.union([transform(x)]) }
     }
-
 }
 
 extension Set : ApplicativeMappable {
@@ -29,7 +28,6 @@ extension Set : ApplicativeMappable {
     public static func singleton(_ element: Element) -> Set<Element> {
         return [element]
     }
-
 }
 
 extension Set : FlatMappable {

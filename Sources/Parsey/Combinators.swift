@@ -228,7 +228,7 @@ public extension Parser {
     /// - parameter separator: parser of a separater
     /// - returns: the composed parser
     func manyOrNone<T>(separatedBy separator: @autoclosure @escaping () -> Parser<T>) -> Parser<[Target]> {
-        return many(separatedBy: separator) | Parser<[Target]>(success: [])
+        return many(separatedBy: separator()) | Parser<[Target]>(success: [])
     }
 
     /// Accept input zero or more times, separated by some separator
@@ -379,12 +379,12 @@ public extension Parser {
     /// - returns: the composed parser
     @inline(__always)
     static func ~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
-        return lhs.skipped(to: rhs)
+        return lhs.skipped(to: rhs())
     }
 
     @inline(__always)
     static func !~~> <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<T> {
-        return lhs.nonbacktracking().skipped(to: rhs)
+        return lhs.nonbacktracking().skipped(to: rhs())
     }
 
     /// Parse the right side on success, producing the original (left) result.
@@ -392,12 +392,12 @@ public extension Parser {
     /// - returns: the composed parser
     @inline(__always)
     static func <~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
-        return lhs.ended(by: rhs)
+        return lhs.ended(by: rhs())
     }
 
     @inline(__always)
     static func !<~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<Target> {
-        return lhs.nonbacktracking().ended(by: rhs)
+        return lhs.nonbacktracking().ended(by: rhs())
     }
 
     /// Parse the right side on success, producing a tuple of results from
@@ -406,7 +406,7 @@ public extension Parser {
     /// - returns: the composed parser
     @inline(__always)
     static func ~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
-        return lhs.followed(by: rhs)
+        return lhs.followed(by: rhs())
     }
 
     /// Parse the right side on success without backtracking, producing a
@@ -415,7 +415,7 @@ public extension Parser {
     /// - returns: the composed parser
     @inline(__always)
     static func !~~ <T>(_ lhs: Parser<Target>, _ rhs: @autoclosure @escaping () -> Parser<T>) -> Parser<(Target, T)> {
-        return lhs.nonbacktracking().followed(by: rhs)
+        return lhs.nonbacktracking().followed(by: rhs())
     }
 
     @inline(__always)
@@ -561,7 +561,7 @@ public extension Parser where Target : Associable {
     /// Same as `.concatenatingResult(with:)`
     /// - returns: the composed parser that produces concatenated result
     static func +(lhs: Parser<Target>, rhs: @autoclosure @escaping () -> Parser<Target>) -> Parser<Target> {
-        return lhs.concatenatingResult(with: rhs)
+        return lhs.concatenatingResult(with: rhs())
     }
 
     /// Concatenate results one or more times

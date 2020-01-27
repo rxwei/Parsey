@@ -6,29 +6,12 @@
 //
 //
 
-// MARK: - Internal disambiguator
-internal extension Sequence {
-    @inline(__always)
-    static func map<U>(_ function: (Element) throws -> U, _ sequence: Self) rethrows -> [U] {
-        return try sequence.map(function)
-    }
-
-    @inline(__always)
-    static func flatMap<S : Sequence>(_ function: (Element) throws -> S, _ sequence: Self) rethrows -> [S.Element] {
-        return try sequence.flatMap(function)
-    }
-}
-
 extension Array : Mappable {
     public typealias MapSource = Element
     public typealias MapTarget = Any
     public typealias MapResult = [MapTarget]
-
-    public func map<MapTarget>(_ transform: (MapSource) throws -> MapTarget) rethrows -> [MapTarget] {
-        return try Array.map(transform, self)
-    }
-
 }
+extension Array : FlatMappable { }
 
 extension Array : ApplicativeMappable {
 
@@ -44,20 +27,8 @@ extension Array : ApplicativeMappable {
 
 }
 
-extension Array : FlatMappable {
-
-    public func flatMap<MapTarget>(_ transform: @escaping (MapSource) throws -> [MapTarget]) rethrows -> [MapTarget] {
-        return try Array.flatMap(transform, self)
-    }
-
-}
-
 extension Array : Associable {
-
-    public static var identity: [Element] {
-        return []
-    }
-
+    public static var identity: [Element] { return [] }
 }
 
 extension Array : Reducible {}
