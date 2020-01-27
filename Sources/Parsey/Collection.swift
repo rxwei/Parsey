@@ -26,7 +26,7 @@ extension CollectionOfOne : SingletonCollection {
 
 }
 
-extension String.CharacterView : SingletonCollection {
+extension String : SingletonCollection {
 
     public init(singleton: Character) {
         self.init()
